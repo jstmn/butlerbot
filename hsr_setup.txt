@@ -1,0 +1,27 @@
+# instructions from https://docs.hsr.io/hsrc_user_manual_en/howto/pc_install.html
+ 
+# ... (removed b/c includes non-public info)
+sudo apt-get update
+sudo apt-get install ros-noetic-tmc-desktop-full
+
+# Uninstall 
+$ sudo apt-get purge ros-noetic-hsr* ros-noetic-tmc-*
+$ sudo rm /etc/apt/sources.list.d/tmc.list*
+$ sudo apt-get update
+$ sudo apt-key del tmc.key
+
+
+
+# -----------
+# Development
+
+
+# start gazebo
+roslaunch gazebo_ros empty_world.launch
+roslaunch hsrb_gazebo_launch hsrb_megaweb2015_world.launch
+# Then press play on gazebo
+
+
+
+sim_mode
+ihsrb
