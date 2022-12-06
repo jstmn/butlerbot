@@ -1,7 +1,8 @@
 from typing import List
 
-from supporting_types import HsrbRobotWrapper, Bottle
+from supporting_types import Bottle
+from hsrb_robot import HsrbRobot
 
 
-def scan_for_bottles(robot_wr: HsrbRobotWrapper) -> List[Bottle]:
+def scan_for_bottles(robot: HsrbRobot) -> List[Bottle]:
     raise NotImplementedError()

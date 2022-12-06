@@ -1,0 +1,14 @@
+
+
+# HsrbRobot.move_base_to() - failed to move_to_go(): Could not find a connection between 'odom' and 'base_footprint' because they are not part of the same tree.Tf has two or more unconnected trees.
+
+# generate tf tree
+rosrun tf2_tools view_frames.py
+rosrun tf view_frames
+
+Error: (map, odom, base_footprint_wheel) are in a different tree than base_footprint
+this error went away for some reason
+
+roslaunch hsrb_gazebo_launch hsrb_megaweb2015_world.launch  # -> tf tree looks correct, can navigate
+roslaunch hsrb_gazebo_launch hsrb_apartment_world.launch    # -> tf tree looks correct. Briefly can navigate, then 'Path plan failed. Can not planning.'
+roslaunch hsrb_gazebo_launch hsrb_butler_bot_world.launch   # -> works. 

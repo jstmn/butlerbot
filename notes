@@ -11,16 +11,34 @@ $ sudo apt-get update
 $ sudo apt-key del tmc.key
 
 
+# Test that gazebo is working:
+roslaunch gazebo_ros empty_world.launch
+
+
+
+
+
+
+
+
+# Rviz
+rostopic echo /clicked_point # then 'Publish Point' in Rviz
+
+
 
 # -----------
 # Development
 
-
-# start gazebo
-roslaunch gazebo_ros empty_world.launch
-roslaunch hsrb_gazebo_launch hsrb_megaweb2015_world.launch
+# 1. Start gazebo
+# roslaunch hsrb_gazebo_launch hsrb_megaweb2015_world.launch
+# roslaunch hsrb_gazebo_launch hsrb_apartment_world.launch
+roslaunch hsrb_gazebo_launch hsrb_butler_bot_world.launch
 # Then press play on gazebo
 
+
+# 2. Run python 
+cdbb
+python3 main.py
 
 
 sim_mode
