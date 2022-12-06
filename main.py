@@ -1,7 +1,7 @@
 from typing import List
 from time import sleep, time
 
-from src.gazebo_utils import gazebo_bottle_poses_callback
+from src.gazebo_utils import gazebo_bottle_poses_callback, visualize_cuboid_in_rviz, visualize_tfs_in_rviz
 from src.supporting_types import Bottle, Cuboid
 from src.hsrb_robot import HsrbRobot
 from src.primitives import (
@@ -12,38 +12,41 @@ from src.primitives import (
     reset_to_neutral,
 )
 from src.perception import scan_for_bottles
+from src.constants import *
 
-# from hsrb_interface import geometry
+from hsrb_interface.geometry import vector3
 import hsrb_interface
 import rospy
-import numpy as np
 import gazebo_msgs.msg
 
 
-PI = np.pi
-GAZEBO_MODE = True
-
 _robot = hsrb_interface.Robot()
 robot = HsrbRobot(_robot)
-clean_area = Cuboid(np.zeros(3), np.zeros(3))  # TODO: fill in the values
 
+# Clean area is where the tray is
+CLEAN_AREA = Cuboid(
+    vector3(CLEAN_AREA_MIN_XY[0], CLEAN_AREA_MIN_XY[1], DESK_HEIGHT - 0.1),
+    vector3(CLEAN_AREA_MAX_XY[0], CLEAN_AREA_MAX_XY[1], DESK_HEIGHT + SODA_CAN_HEIGHT + 0.1),
+)
+visualize_cuboid_in_rviz(CLEAN_AREA)
 
-DESK_TARGET_POSE = (2.75, 0.25, 3 / 2 * PI)  # (x, y, yaw)
-# DESK_TARGET_POSE = (1.0, 0, 0) # (x, y, yaw)
-# DESK_TARGET_POSE = (8.0, 6.7, -1.567) # (x, y, yaw)
-
-
+# Update the ground truth bottle poses (from gazebo) at a fixed frequency
 BOTTLE_POSES_GT = []
-bottle_tf_update_frequency = 10.0
-last_published = None
-
 if GAZEBO_MODE:
+    bottle_tf_update_frequency = 0.5
+    last_published = None
+
     def callback_wrapper(data):
         global last_published, BOTTLE_POSES_GT
-        if last_published and bottle_tf_update_frequency > 0.0 and time() - last_published <= 1.0 / bottle_tf_update_frequency:
+        if (
+            last_published
+            and bottle_tf_update_frequency > 0.0
+            and time() - last_published <= 1.0 / bottle_tf_update_frequency
+        ):
             return
         BOTTLE_POSES_GT = gazebo_bottle_poses_callback(data)
         last_published = time()
+        visualize_tfs_in_rviz(BOTTLE_POSES_GT)
 
     rospy.Subscriber("/gazebo/model_states", gazebo_msgs.msg.ModelStates, callback_wrapper)
 
@@ -55,11 +58,18 @@ def scan_for_bottles_wrapper(robot: HsrbRobot) -> List[Bottle]:
         return [Bottle(pose) for pose in BOTTLE_POSES_GT]
 
 
-"""
+""" Usage
+
+# Terminal 1:
+roslaunch hsrb_gazebo_launch hsrb_butler_bot_world.launch
+
+# Terminal 2:
+rostopic echo /clicked_point    # then 'Publish Point' in Rviz
+
+
 """
 
 if __name__ == "__main__":
-
     print("Sleeping for 1 seconds to allow the robot to initialize", flush=True)
     rospy.sleep(1.0)
     robot.say("Hello. My name is Mr. Butler. I will now clean the table")
@@ -68,14 +78,16 @@ if __name__ == "__main__":
     robot.move_base_to(DESK_TARGET_POSE)
 
     while True:
-
         # Find all bottles
         bottles = scan_for_bottles_wrapper(robot)
         robot.say(f"Located {len(bottles)} bottles")
 
+        # print("sleeping for 30 seconds", flush=True)
+        # sleep(30)
+
         # Find all bottles that are out of place
-        out_of_place_bottles = [bottle for bottle in bottles if not bottle.in_area(clean_area)]
-        cleaned_bottles = [bottle for bottle in bottles if bottle.in_area(clean_area)]
+        out_of_place_bottles = [bottle for bottle in bottles if not bottle.in_area(CLEAN_AREA)]
+        cleaned_bottles = [bottle for bottle in bottles if bottle.in_area(CLEAN_AREA)]
         assert len(out_of_place_bottles) + len(cleaned_bottles) == len(bottles)
 
         # Mission complete if there are no bottles out of place
@@ -99,7 +111,7 @@ if __name__ == "__main__":
             # TODO: What to do in this case
             break
 
-        place_currently_grasped_bottle_on_tray(robot, clean_area, cleaned_bottles)
+        place_currently_grasped_bottle_on_tray(robot, CLEAN_AREA, cleaned_bottles)
         reset_to_neutral(robot)
 
         # Verify that we are holding a bottle
