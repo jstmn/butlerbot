@@ -1,17 +1,17 @@
 from typing import List
 from time import sleep, time
 
-from gazebo_utils import gazebo_bottle_poses_callback
-from supporting_types import Bottle, Cuboid
-from hsrb_robot import HsrbRobot
-from primitives import (
+from src.gazebo_utils import gazebo_bottle_poses_callback
+from src.supporting_types import Bottle, Cuboid
+from src.hsrb_robot import HsrbRobot
+from src.primitives import (
     get_bottle_to_grasp,
     grasp_bottle,
     am_currently_holding_a_bottle,
     place_currently_grasped_bottle_on_tray,
     reset_to_neutral,
 )
-from perception import scan_for_bottles
+from src.perception import scan_for_bottles
 
 # from hsrb_interface import geometry
 import hsrb_interface

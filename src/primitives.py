@@ -1,7 +1,7 @@
 from typing import List
 
-from supporting_types import Cuboid, Bottle
-from hsrb_robot import HsrbRobot
+from src.supporting_types import Cuboid, Bottle
+from src.hsrb_robot import HsrbRobot
 
 
 def get_bottle_to_grasp(bottles: List[Bottle]) -> Bottle:
