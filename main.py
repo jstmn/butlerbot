@@ -6,7 +6,6 @@ from src.supporting_types import Bottle, Cuboid
 from src.hsrb_robot import HsrbRobot
 from src.primitives import (
     get_bottle_to_grasp,
-    grasp_bottle,
     am_currently_holding_a_bottle,
     place_currently_grasped_bottle_on_tray,
     reset_to_neutral,
@@ -82,9 +81,6 @@ if __name__ == "__main__":
         bottles = scan_for_bottles_wrapper(robot)
         robot.say(f"Located {len(bottles)} bottles")
 
-        # print("sleeping for 30 seconds", flush=True)
-        # sleep(30)
-
         # Find all bottles that are out of place
         out_of_place_bottles = [bottle for bottle in bottles if not bottle.in_area(CLEAN_AREA)]
         cleaned_bottles = [bottle for bottle in bottles if bottle.in_area(CLEAN_AREA)]
@@ -95,10 +91,11 @@ if __name__ == "__main__":
             robot.say("All bottles are in now in place. Mission complete")
             break
 
-        bottle_to_grasp = get_bottle_to_grasp(out_of_place_bottles)
+        bottle_to_grasp = get_bottle_to_grasp(robot, out_of_place_bottles)
+        print(f"Bottle to grasp: {bottle_to_grasp}", flush=True)
 
         # Grasp the bottle
-        grasp_successful = grasp_bottle(robot, bottle_to_grasp)
+        grasp_successful = robot.grasp_bottle(bottle_to_grasp)
         if not grasp_successful:
             robot.say("I was unable to grasp the bottle")
             # TODO: What to do in this case

@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from src.constants import *
+from src.math_utils import distance_between_vector3s
 
 from hsrb_interface.geometry import Vector3, Quaternion
 from geometry_msgs.msg import Point as RosPoint
@@ -8,6 +9,7 @@ from geometry_msgs.msg import Quaternion as RosQuaternion
 from geometry_msgs.msg import (
     Pose as RosPose,
 )  # renamed to `RosPose` to avoid confusion with hsrb_interface.geometry.Pose
+import numpy as np
 
 
 @dataclass
@@ -89,3 +91,6 @@ class Bottle:
 
     def in_area(self, cube: Cuboid) -> bool:
         return self._bounding_cube.enclosed_in(cube)
+
+    def distance_to_point(self, point: Vector3) -> float:
+        return distance_between_vector3s(self._tf.position, point)

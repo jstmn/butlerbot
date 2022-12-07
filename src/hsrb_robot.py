@@ -1,5 +1,7 @@
 from typing import Tuple
 
+from src.supporting_types import Cuboid, Bottle
+
 from hsrb_interface import Robot
 from hsrb_interface.mobile_base import MobileBase
 from hsrb_interface.joint_group import JointGroup
@@ -33,11 +35,20 @@ class HsrbRobot:
     def gripper(self) -> Gripper:
         return self._gripper
 
+    def base_xy_pose(self) -> Tuple[float, float]:
+        base_pose, _ = self.omni_base.get_pose()
+        return base_pose.x, base_pose.y
+
+    # ------------------------------------------------------------------------------------------------------------------
+    #                                               Actions
+
+    def grasp_bottle(self, bottle: Bottle) -> bool:
+        raise NotImplementedError()
+
     def move_base_to(self, pose: Tuple[float, float, float]):
         print("HsrbRobot.move_base_to() - Moving to pose:", pose, flush=True)
         print("                         - Current pose:", self.omni_base.get_pose(), flush=True)
         print("                         - Moving to go state", flush=True)
-
         try:
             self.whole_body.move_to_go()
         except Exception as e:

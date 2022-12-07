@@ -1,12 +1,15 @@
 from typing import List
 from src.constants import *
 from src.supporting_types import Transform, Cuboid
+from src.math_utils import rotate_vector
 
 import rospy
 
 from geometry_msgs.msg import PoseArray
 from visualization_msgs.msg import Marker
 from hsrb_interface.geometry import quaternion, vector3
+
+CAN_TF_OFFSET = vector3(x=GAZEBO_TO_RVIZ_CAN_OFFSET[0], y=GAZEBO_TO_RVIZ_CAN_OFFSET[1], z=GAZEBO_TO_RVIZ_CAN_OFFSET[2])
 
 
 def gazebo_bottle_poses_callback(data, apply_offset=True):
@@ -19,25 +22,34 @@ def gazebo_bottle_poses_callback(data, apply_offset=True):
     """
     assert GAZEBO_MODE, "This function should only be called if GAZEBO_MODE is enabled"
 
-    offset = (0.0, 0.0)
+    xy_offset = (0.0, 0.0)
     if apply_offset:
-        offset = GAZEBO_TO_RVIZ_XY_OFFSET
+        xy_offset = GAZEBO_TO_RVIZ_XY_OFFSET
 
     poses = []
     for i in range(len(data.name)):
         ref_frame = data.name[i]
         if "TOGRASP" in ref_frame:
+            rotation = quaternion(
+                x=data.pose[i].orientation.x,
+                y=data.pose[i].orientation.y,
+                z=data.pose[i].orientation.z,
+                w=data.pose[i].orientation.w,
+            )
+            rotated_tf_rotation = rotate_vector(CAN_TF_OFFSET, rotation)
+            print("\nrotation:           ", rotation)
+            print("CAN_TF_OFFSET:      ", CAN_TF_OFFSET)
+            print("rotated_tf_rotation:", rotated_tf_rotation)
+            print()
+
             tf = Transform(
                 name=data.name[i],
                 position=vector3(
-                    data.pose[i].position.x + offset[0], data.pose[i].position.y + offset[1], data.pose[i].position.z
+                    data.pose[i].position.x + xy_offset[0] + rotated_tf_rotation[0],
+                    data.pose[i].position.y + xy_offset[1] + rotated_tf_rotation[1],
+                    data.pose[i].position.z + rotated_tf_rotation[2],
                 ),
-                quat=quaternion(
-                    x=data.pose[i].orientation.x,
-                    y=data.pose[i].orientation.y,
-                    z=data.pose[i].orientation.z,
-                    w=data.pose[i].orientation.w,
-                ),
+                quat=rotation,
             )
             poses.append(tf)
     return poses

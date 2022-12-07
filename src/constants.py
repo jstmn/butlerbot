@@ -14,3 +14,6 @@ if GAZEBO_MODE:
 
     # See /opt/ros/noetic/share/hsrb_gazebo_launch/launch/hsrb_butler_bot_world.launch
     GAZEBO_TO_RVIZ_XY_OFFSET = (-5.0, -6.6)
+
+    # Gazebo defines the reference frame of the soda cans in a weird place - these offsets fix the tf the specified format
+    GAZEBO_TO_RVIZ_CAN_OFFSET = (0.01, -0.035, -0.055)
