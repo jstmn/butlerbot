@@ -17,9 +17,22 @@ cp ros_configs/butler_bot_world.world /opt/ros/noetic/share/tmc_gazebo_worlds/wo
 
 ## Development
 
-Update `ros_configs/`:
+
 ```
-cp /opt/ros/noetic/share/hsrb_gazebo_launch/launch/hsrb_butler_bot_world.launch ros_configs/
-cp /opt/ros/noetic/share/hsrb_gazebo_launch/launch/include/hsrb_gazebo_common.xml ros_configs/
-cp /opt/ros/noetic/share/tmc_gazebo_worlds/worlds/butler_bot_world.world ros_configs/
+# Terminal 1:
+roslaunch hsrb_gazebo_launch hsrb_butler_bot_world.launch
+
+# Terminal 2:
+rostopic echo /clicked_point    # then 'Publish Point' in Rviz
+
+# Terminal 3:
+python3 main.py
 ```
+
+
+
+
+
+## Reference frames
+
+- **cans/bottles:** The reference frame of a can or bottle is attached to the bottom of the can/bottle in the center, with +z pointing up.
