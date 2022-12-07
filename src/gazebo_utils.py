@@ -59,7 +59,7 @@ def visualize_cuboid_in_rviz(cube: Cuboid):
     marker.id = 0
 
     # Set the scale of the marker
-    widths = cube.widths()
+    widths = cube.widths
     marker.scale.x = widths.x
     marker.scale.y = widths.y
     marker.scale.z = widths.z
@@ -71,7 +71,7 @@ def visualize_cuboid_in_rviz(cube: Cuboid):
     marker.color.a = 0.5
 
     # Set the pose of the marker
-    midpoint = cube.midpoint()
+    midpoint = cube.midpoint
     marker.pose.position.x = midpoint.x
     marker.pose.position.y = midpoint.y
     marker.pose.position.z = midpoint.z
