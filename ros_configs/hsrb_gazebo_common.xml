@@ -64,7 +64,7 @@
   <!-- rviz-->
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find hsrb_common_launch)/config/hsrb_display_full_$(arg robot_name).rviz" if="$(arg rviz)"/>
   <!-- use a custom rviz config -->
-  <node name="rviz" pkg="rviz" type="rviz" args="-d /home/jstm/Documents/csci513/butler-bot/rviz_configs/rviz_config.rviz" if="$(arg custom_rviz)"/> 
+  <node name="rviz" pkg="rviz" type="rviz" args="-d /home/jstm/Documents/csci513/butler-bot/ros_configs/rviz_config.rviz" if="$(arg custom_rviz)"/> 
 
   <!-- load override parameters-->
   <rosparam command="load" file="$(arg param_file)" />

@@ -37,11 +37,6 @@ def gazebo_bottle_poses_callback(data, apply_offset=True):
                 w=data.pose[i].orientation.w,
             )
             rotated_tf_rotation = rotate_vector(CAN_TF_OFFSET, rotation)
-            print("\nrotation:           ", rotation)
-            print("CAN_TF_OFFSET:      ", CAN_TF_OFFSET)
-            print("rotated_tf_rotation:", rotated_tf_rotation)
-            print()
-
             tf = Transform(
                 name=data.name[i],
                 position=vector3(
@@ -49,7 +44,7 @@ def gazebo_bottle_poses_callback(data, apply_offset=True):
                     data.pose[i].position.y + xy_offset[1] + rotated_tf_rotation[1],
                     data.pose[i].position.z + rotated_tf_rotation[2],
                 ),
-                quat=rotation,
+                rotation=rotation,
             )
             poses.append(tf)
     return poses
@@ -91,9 +86,7 @@ def visualize_cuboid_in_rviz(cube: Cuboid):
     marker.pose.orientation.y = 0.0
     marker.pose.orientation.z = 0.0
     marker.pose.orientation.w = 1.0
-
     marker_pub.publish(marker)
-    print(f"visualize_cuboid_in_rviz(): publishing cube {cube}")
 
 
 def visualize_tfs_in_rviz(tfs: List[Transform]):
@@ -101,7 +94,6 @@ def visualize_tfs_in_rviz(tfs: List[Transform]):
     stamped_tfs_ros.header.frame_id = "map"
     stamped_tfs_ros.header.stamp = rospy.Time.now()
     tf_pub.publish(stamped_tfs_ros)
-    print(f"visualize_tfs_in_rviz(): publishing tfs")
 
 
 # if __name__ == "__main__":

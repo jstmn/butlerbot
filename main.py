@@ -65,7 +65,8 @@ roslaunch hsrb_gazebo_launch hsrb_butler_bot_world.launch
 # Terminal 2:
 rostopic echo /clicked_point    # then 'Publish Point' in Rviz
 
-
+# Terminal 3:
+python3 main.py
 """
 
 if __name__ == "__main__":
@@ -93,6 +94,9 @@ if __name__ == "__main__":
 
         bottle_to_grasp = get_bottle_to_grasp(robot, out_of_place_bottles)
         print(f"Bottle to grasp: {bottle_to_grasp}", flush=True)
+
+        # Look at the bottle. Not necessary, but makes it easier to see what the robot is doing and is cool
+        robot.look_at(bottle_to_grasp.tf.position)
 
         # Grasp the bottle
         grasp_successful = robot.grasp_bottle(bottle_to_grasp)

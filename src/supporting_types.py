@@ -4,12 +4,12 @@ from src.constants import *
 from src.math_utils import distance_between_vector3s
 
 from hsrb_interface.geometry import Vector3, Quaternion
+from hsrb_interface.geometry import Pose as HsrbPose
 from geometry_msgs.msg import Point as RosPoint
 from geometry_msgs.msg import Quaternion as RosQuaternion
 from geometry_msgs.msg import (
     Pose as RosPose,
 )  # renamed to `RosPose` to avoid confusion with hsrb_interface.geometry.Pose
-import numpy as np
 
 
 @dataclass
@@ -51,19 +51,22 @@ class Cuboid:
 class Transform:
     name: str
     position: Vector3
-    quat: Quaternion
+    rotation: Quaternion
 
     def position_rosformat(self) -> RosPoint:
         return RosPoint(self.position.x, self.position.y, self.position.z)
 
     def orientation_rosformat(self) -> RosQuaternion:
-        return RosQuaternion(x=self.quat.x, y=self.quat.y, z=self.quat.z, w=self.quat.w)
+        return RosQuaternion(x=self.rotation.x, y=self.rotation.y, z=self.rotation.z, w=self.rotation.w)
 
     def pose_rosformat(self) -> RosPose:
         return RosPose(position=self.position_rosformat(), orientation=self.orientation_rosformat())
 
+    def pose_hsrb_format(self) -> HsrbPose:
+        return HsrbPose(self.position, self.rotation)
+
     def __str__(self):
-        return f"[Transform[{self.name}] position: {self.position}, rotation: {self.quat}]"
+        return f"[Transform[{self.name}] position: {self.position}, rotation: {self.rotation}]"
 
 
 class Bottle:
@@ -94,3 +97,6 @@ class Bottle:
 
     def distance_to_point(self, point: Vector3) -> float:
         return distance_between_vector3s(self._tf.position, point)
+
+    def __str__(self):
+        return f"<Bottle[] tf: '{self.tf}'>"
