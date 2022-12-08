@@ -1,8 +1,14 @@
 from typing import List
 from time import sleep, time
+import threading
 
-from src.gazebo_utils import gazebo_bottle_poses_callback, visualize_cuboid_in_rviz, visualize_tfs_in_rviz
-from src.supporting_types import Bottle, Cuboid
+from src.gazebo_utils import (
+    gazebo_bottle_poses_callback,
+    visualize_cuboid_in_rviz,
+    visualize_tf_set_in_rviz,
+    visualize_tf_in_rviz,
+)
+from src.supporting_types import Bottle, Cuboid, Transform
 from src.hsrb_robot import HsrbRobot
 from src.primitives import (
     get_bottle_to_grasp,
@@ -27,10 +33,10 @@ CLEAN_AREA = Cuboid(
     vector3(CLEAN_AREA_MIN_XY[0], CLEAN_AREA_MIN_XY[1], DESK_HEIGHT - 0.1),
     vector3(CLEAN_AREA_MAX_XY[0], CLEAN_AREA_MAX_XY[1], DESK_HEIGHT + SODA_CAN_HEIGHT + 0.1),
 )
-visualize_cuboid_in_rviz(CLEAN_AREA)
+visualize_cuboid_in_rviz("clean_area", CLEAN_AREA)  # pubs to 'visualization_marker'
 
 # Update the ground truth bottle poses (from gazebo) at a fixed frequency
-BOTTLE_POSES_GT = []
+BOTTLE_POSES_GT: List[Transform] = []
 if GAZEBO_MODE:
     bottle_tf_update_frequency = 0.5
     last_published = None
@@ -45,11 +51,24 @@ if GAZEBO_MODE:
             return
         BOTTLE_POSES_GT = gazebo_bottle_poses_callback(data)
         last_published = time()
-        visualize_tfs_in_rviz(BOTTLE_POSES_GT)
+        visualize_tf_set_in_rviz("can_tfs", BOTTLE_POSES_GT)
 
     rospy.Subscriber("/gazebo/model_states", gazebo_msgs.msg.ModelStates, callback_wrapper)
 
+# Visualize the end effector pose in Rviz
+def visualize_end_effector_thread_callback():
+    global robot
+    while True:
+        visualize_tf_in_rviz("end_effector_tf", robot.get_end_effector_pose())
+        sleep(1 / 30.0)
 
+
+x = threading.Thread(
+    target=visualize_end_effector_thread_callback, daemon=True
+)  # daemon=True means the thread will be killed when the main thread exits
+x.start()
+
+#
 def scan_for_bottles_wrapper(robot: HsrbRobot) -> List[Bottle]:
     if not GAZEBO_MODE:
         return scan_for_bottles(robot)
@@ -73,6 +92,9 @@ if __name__ == "__main__":
     print("Sleeping for 1 seconds to allow the robot to initialize", flush=True)
     rospy.sleep(1.0)
     robot.say("Hello. My name is Mr. Butler. I will now clean the table")
+
+    # sleep(30)
+    # exit()
 
     # Move to the table
     robot.move_base_to(DESK_TARGET_POSE)

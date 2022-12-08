@@ -6,13 +6,15 @@ from src.math_utils import rotate_vector
 import rospy
 
 from geometry_msgs.msg import PoseArray
+from geometry_msgs.msg import Pose as RosPose
+from geometry_msgs.msg import PoseStamped
 from visualization_msgs.msg import Marker
 from hsrb_interface.geometry import quaternion, vector3
 
 CAN_TF_OFFSET = vector3(x=GAZEBO_TO_RVIZ_CAN_OFFSET[0], y=GAZEBO_TO_RVIZ_CAN_OFFSET[1], z=GAZEBO_TO_RVIZ_CAN_OFFSET[2])
 
 
-def gazebo_bottle_poses_callback(data, apply_offset=True):
+def gazebo_bottle_poses_callback(data, apply_offset=True) -> List[Transform]:
     """
 
     Notes:
@@ -52,11 +54,17 @@ def gazebo_bottle_poses_callback(data, apply_offset=True):
 
 # Code example from https://answers.ros.org/question/373802/minimal-working-example-for-rviz-marker-publishing/
 rospy.init_node("rviz_marker")
-marker_pub = rospy.Publisher("/visualization_marker", Marker, queue_size=2)
-tf_pub = rospy.Publisher("/visualization_tf", PoseArray, queue_size=2)
+marker_pubs = {"clean_area": rospy.Publisher("/clean_area", Marker, queue_size=2)}
+
+tf_pub = {
+    "end_effector_tf": rospy.Publisher("/end_effector_tf", PoseStamped, queue_size=2),
+    "grasp_pose_tf": rospy.Publisher("/grasp_pose_tf", PoseStamped, queue_size=2),
+}
+
+tf_sets_pub = {"can_tfs": rospy.Publisher("/can_tfs", PoseArray, queue_size=2)}
 
 
-def visualize_cuboid_in_rviz(cube: Cuboid):
+def visualize_cuboid_in_rviz(alias: str, cube: Cuboid):
     marker = Marker()
     marker.header.frame_id = "map"
     marker.header.stamp = rospy.Time.now()
@@ -86,14 +94,23 @@ def visualize_cuboid_in_rviz(cube: Cuboid):
     marker.pose.orientation.y = 0.0
     marker.pose.orientation.z = 0.0
     marker.pose.orientation.w = 1.0
-    marker_pub.publish(marker)
+    marker_pubs[alias].publish(marker)
 
 
-def visualize_tfs_in_rviz(tfs: List[Transform]):
+def visualize_tf_in_rviz(topic_name: str, tf: Transform):
+    assert topic_name in tf_pub, f"Invalid topic name: {topic_name}"
+    tf_ros = PoseStamped(pose=tf.pose_rosformat())
+    tf_ros.header.frame_id = "map"
+    tf_ros.header.stamp = rospy.Time.now()
+    tf_pub[topic_name].publish(tf_ros)
+
+
+def visualize_tf_set_in_rviz(topic_name: str, tfs: List[Transform]):
+    assert topic_name in tf_sets_pub, f"Invalid topic name: {topic_name}"
     stamped_tfs_ros = PoseArray(poses=[tf.pose_rosformat() for tf in tfs])
     stamped_tfs_ros.header.frame_id = "map"
     stamped_tfs_ros.header.stamp = rospy.Time.now()
-    tf_pub.publish(stamped_tfs_ros)
+    tf_sets_pub[topic_name].publish(stamped_tfs_ros)
 
 
 # if __name__ == "__main__":

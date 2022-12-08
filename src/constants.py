@@ -19,4 +19,5 @@ if GAZEBO_MODE:
     GAZEBO_TO_RVIZ_XY_OFFSET = (-5.0, -6.6)
 
     # Gazebo defines the reference frame of the soda cans in a weird place - these offsets fix the tf the specified format
-    GAZEBO_TO_RVIZ_CAN_OFFSET = (0.01, -0.035, -0.055)
+    GAZEBO_TO_RVIZ_CAN_OFFSET = (0.0, 0.0, -0.05)
+    # GAZEBO_TO_RVIZ_CAN_OFFSET = (0.01, -0.035, -0.055) # it seems like the pose changed. These used to be good. I probably calibrated when the robot was mislocalized
