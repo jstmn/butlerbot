@@ -14,6 +14,7 @@ if GAZEBO_MODE:
     CLEAN_AREA_MIN_XY = (2.2714, -0.6963)
     CLEAN_AREA_MAX_XY = (2.5979, -0.3967)
     DESK_TARGET_POSE = (2.75, 0.25, 3 / 2 * PI)  # (x, y, yaw)
+    DESK_CLEAN_TARGET_POSE = (2.45, 0.25, 3 / 2 * PI)  # (x, y, yaw)
 
     # See /opt/ros/noetic/share/hsrb_gazebo_launch/launch/hsrb_butler_bot_world.launch
     GAZEBO_TO_RVIZ_XY_OFFSET = (-5.0, -6.6)

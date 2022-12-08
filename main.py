@@ -1,20 +1,17 @@
 from typing import List
 from time import sleep, time
-import threading
 
 from src.gazebo_utils import (
     gazebo_bottle_poses_callback,
     visualize_cuboid_in_rviz,
     visualize_tf_set_in_rviz,
-    visualize_tf_in_rviz,
 )
 from src.supporting_types import Bottle, Cuboid, Transform
 from src.hsrb_robot import HsrbRobot
 from src.primitives import (
     get_bottle_to_grasp,
     am_currently_holding_a_bottle,
-    place_currently_grasped_bottle_on_tray,
-    reset_to_neutral,
+    get_bottle_place_location,
 )
 from src.perception import scan_for_bottles
 from src.constants import *
@@ -55,19 +52,6 @@ if GAZEBO_MODE:
 
     rospy.Subscriber("/gazebo/model_states", gazebo_msgs.msg.ModelStates, callback_wrapper)
 
-# Visualize the end effector pose in Rviz
-def visualize_end_effector_thread_callback():
-    global robot
-    while True:
-        visualize_tf_in_rviz("end_effector_tf", robot.get_end_effector_pose())
-        sleep(1 / 30.0)
-
-
-x = threading.Thread(
-    target=visualize_end_effector_thread_callback, daemon=True
-)  # daemon=True means the thread will be killed when the main thread exits
-x.start()
-
 #
 def scan_for_bottles_wrapper(robot: HsrbRobot) -> List[Bottle]:
     if not GAZEBO_MODE:
@@ -93,9 +77,6 @@ if __name__ == "__main__":
     rospy.sleep(1.0)
     robot.say("Hello. My name is Mr. Butler. I will now clean the table")
 
-    # sleep(30)
-    # exit()
-
     # Move to the table
     robot.move_base_to(DESK_TARGET_POSE)
 
@@ -114,32 +95,40 @@ if __name__ == "__main__":
             robot.say("All bottles are in now in place. Mission complete")
             break
 
-        bottle_to_grasp = get_bottle_to_grasp(robot, out_of_place_bottles)
-        print(f"Bottle to grasp: {bottle_to_grasp}", flush=True)
+        # bottle_to_grasp = get_bottle_to_grasp(robot, out_of_place_bottles)
+        # print(f"Bottle to grasp: {bottle_to_grasp}", flush=True)
 
-        # Look at the bottle. Not necessary, but makes it easier to see what the robot is doing and is cool
-        robot.look_at(bottle_to_grasp.tf.position)
+        # # Look at the bottle. Not necessary, but makes it easier to see what the robot is doing and is cool
+        # robot.look_at(bottle_to_grasp.tf.position)
 
-        # Grasp the bottle
-        grasp_successful = robot.grasp_bottle(bottle_to_grasp)
-        if not grasp_successful:
-            robot.say("I was unable to grasp the bottle")
-            # TODO: What to do in this case
+        # # Grasp the bottle
+        # grasp_successful = robot.grasp_bottle(bottle_to_grasp)
+        # if not grasp_successful:
+        #     robot.say("I was unable to grasp the bottle")
+        #     # TODO: What to do in this case
+        #     break
+
+        # Verify that we are holding a bottle
+        # holding_a_bottle = am_currently_holding_a_bottle(robot)
+        # if not holding_a_bottle:
+        #     robot.say("I have detected that I am not holding a bottle, even though I believed my grasp was successful")
+        #     # TODO: What to do in this case
+        #     break
+
+        bottle_place_location = get_bottle_place_location(CLEAN_AREA, cleaned_bottles)
+        print(f"Bottle place location: {bottle_place_location}", flush=True)
+
+        bottled_placed = robot.place_currently_grasped_bottle(bottle_place_location, cleaned_bottles)
+        if not bottled_placed:
+            print("Failed to place bottle, aborting", flush=True)
             break
 
         # Verify that we are holding a bottle
-        holding_a_bottle = am_currently_holding_a_bottle(robot)
-        if not holding_a_bottle:
-            robot.say("I have detected that I am not holding a bottle, even though I believed my grasp was successful")
-            # TODO: What to do in this case
-            break
+        # holding_a_bottle = am_currently_holding_a_bottle(robot)
+        # if holding_a_bottle:
+        #     robot.say("I have detected I am holding a bottle, which I should not be")
+        #     # TODO: What to do in this case
+        #     break
+        break
 
-        place_currently_grasped_bottle_on_tray(robot, CLEAN_AREA, cleaned_bottles)
-        reset_to_neutral(robot)
-
-        # Verify that we are holding a bottle
-        holding_a_bottle = am_currently_holding_a_bottle(robot)
-        if holding_a_bottle:
-            robot.say("I have detected I am holding a bottle, which I should not be")
-            # TODO: What to do in this case
-            break
+    robot.say("Mission complete")

@@ -5,10 +5,8 @@ from src.math_utils import rotate_vector
 
 import rospy
 
-from geometry_msgs.msg import PoseArray
-from geometry_msgs.msg import Pose as RosPose
-from geometry_msgs.msg import PoseStamped
-from visualization_msgs.msg import Marker
+from geometry_msgs.msg import PoseArray, PoseStamped
+from visualization_msgs.msg import Marker, MarkerArray
 from hsrb_interface.geometry import quaternion, vector3
 
 CAN_TF_OFFSET = vector3(x=GAZEBO_TO_RVIZ_CAN_OFFSET[0], y=GAZEBO_TO_RVIZ_CAN_OFFSET[1], z=GAZEBO_TO_RVIZ_CAN_OFFSET[2])
@@ -55,45 +53,24 @@ def gazebo_bottle_poses_callback(data, apply_offset=True) -> List[Transform]:
 # Code example from https://answers.ros.org/question/373802/minimal-working-example-for-rviz-marker-publishing/
 rospy.init_node("rviz_marker")
 marker_pubs = {"clean_area": rospy.Publisher("/clean_area", Marker, queue_size=2)}
+marker_set_pubs = {"obstacle_world": rospy.Publisher("/obstacle_world", MarkerArray, queue_size=2)}
 
 tf_pub = {
-    "end_effector_tf": rospy.Publisher("/end_effector_tf", PoseStamped, queue_size=2),
     "grasp_pose_tf": rospy.Publisher("/grasp_pose_tf", PoseStamped, queue_size=2),
 }
 
 tf_sets_pub = {"can_tfs": rospy.Publisher("/can_tfs", PoseArray, queue_size=2)}
 
 
+def visualize_cuboids_in_rviz(alias: str, cubes: List[Cuboid]):
+    assert alias in marker_set_pubs, f"Invalid alias: {alias}"
+    markers = [cube.get_ros_marker(frame_id="map") for cube in cubes]
+    marker_array = MarkerArray(markers=markers)
+    marker_set_pubs[alias].publish(marker_array)
+
+
 def visualize_cuboid_in_rviz(alias: str, cube: Cuboid):
-    marker = Marker()
-    marker.header.frame_id = "map"
-    marker.header.stamp = rospy.Time.now()
-
-    # set shape, Arrow: 0; Cube: 1 ; Sphere: 2 ; Cylinder: 3
-    marker.type = 1
-    marker.id = 0
-
-    # Set the scale of the marker
-    widths = cube.widths
-    marker.scale.x = widths.x
-    marker.scale.y = widths.y
-    marker.scale.z = widths.z
-
-    # Set the color
-    marker.color.r = 0.0
-    marker.color.g = 1.0
-    marker.color.b = 0.0
-    marker.color.a = 0.5
-
-    # Set the pose of the marker
-    midpoint = cube.midpoint
-    marker.pose.position.x = midpoint.x
-    marker.pose.position.y = midpoint.y
-    marker.pose.position.z = midpoint.z
-    marker.pose.orientation.x = 0.0
-    marker.pose.orientation.y = 0.0
-    marker.pose.orientation.z = 0.0
-    marker.pose.orientation.w = 1.0
+    marker = cube.get_ros_marker(frame_id="map")
     marker_pubs[alias].publish(marker)
 
 

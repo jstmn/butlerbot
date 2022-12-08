@@ -3,13 +3,15 @@ from dataclasses import dataclass
 from src.constants import *
 from src.math_utils import distance_between_vector3s
 
-from hsrb_interface.geometry import Vector3, Quaternion
+from hsrb_interface.geometry import vector3, Vector3, Quaternion
 from hsrb_interface.geometry import Pose as HsrbPose
 from geometry_msgs.msg import Point as RosPoint
+from visualization_msgs.msg import Marker
 from geometry_msgs.msg import Quaternion as RosQuaternion
 from geometry_msgs.msg import (
     Pose as RosPose,
 )  # renamed to `RosPose` to avoid confusion with hsrb_interface.geometry.Pose
+import rospy
 
 
 @dataclass
@@ -30,6 +32,47 @@ class Cuboid:
             y=(self.xyz_min.y + self.xyz_max.y) / 2,
             z=(self.xyz_min.z + self.xyz_max.z) / 2,
         )
+
+    # TODO(@jstm): Will this update the padding multiple times? That would be bad.
+    def add_x_padding(self, padding: float):
+        self.xyz_min = vector3(x=self.xyz_min.x - padding, y=self.xyz_min.y, z=self.xyz_min.z)
+        self.xyz_max = vector3(x=self.xyz_max.x + padding, y=self.xyz_max.y, z=self.xyz_max.z)
+
+    def add_y_padding(self, padding: float):
+        self.xyz_min = vector3(x=self.xyz_min.x, y=self.xyz_min.y - padding, z=self.xyz_min.z)
+        self.xyz_max = vector3(x=self.xyz_max.x, y=self.xyz_max.y + padding, z=self.xyz_max.z)
+
+    def get_ros_marker(self, frame_id: str = "map") -> Marker:
+        marker = Marker()
+        marker.header.frame_id = frame_id
+        marker.header.stamp = rospy.Time.now()
+
+        # set shape, Arrow: 0; Cube: 1 ; Sphere: 2 ; Cylinder: 3
+        marker.type = 1
+        marker.id = 0
+
+        # Set the scale of the marker
+        widths = self.widths
+        marker.scale.x = widths.x
+        marker.scale.y = widths.y
+        marker.scale.z = widths.z
+
+        # Set the color
+        marker.color.r = 0.0
+        marker.color.g = 1.0
+        marker.color.b = 0.0
+        marker.color.a = 0.5
+
+        # Set the pose of the marker
+        midpoint = self.midpoint
+        marker.pose.position.x = midpoint.x
+        marker.pose.position.y = midpoint.y
+        marker.pose.position.z = midpoint.z
+        marker.pose.orientation.x = 0.0
+        marker.pose.orientation.y = 0.0
+        marker.pose.orientation.z = 0.0
+        marker.pose.orientation.w = 1.0
+        return marker
 
     def enclosed_in(self, other: "Cuboid") -> bool:
         return (

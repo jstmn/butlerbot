@@ -1,7 +1,7 @@
-from typing import Tuple
+from typing import List, Tuple
 
 from src.supporting_types import Cuboid, Bottle, Transform
-from src.gazebo_utils import visualize_tf_in_rviz
+from src.gazebo_utils import visualize_tf_in_rviz, visualize_cuboids_in_rviz
 from src.constants import *
 
 from hsrb_interface import Robot
@@ -11,7 +11,7 @@ from hsrb_interface.end_effector import Gripper
 from hsrb_interface.collision_world import CollisionWorld
 from hsrb_interface.geometry import Vector3, vector3, quaternion
 from hsrb_interface.geometry import Pose as HsrbPose
-
+from hsrb_interface.exceptions import FollowTrajectoryError
 
 _MOVE_TIMEOUT = 30.0
 
@@ -19,23 +19,26 @@ _END_EFF_FLAT_ROTATION = quaternion(
     x=-0.5474032817174194, y=0.44796588933801107, z=-0.547040587681599, w=-0.44768605582883053
 )
 
-
+# TODO: get this collision wold only once
 def get_collision_world() -> CollisionWorld:
     if GAZEBO_MODE:
         table_surface_c = Cuboid(
             # xyz_min=vector3(DESK_MIN_XY[0], DESK_MIN_XY[1], DESK_HEIGHT - 0.05),
             xyz_min=vector3(DESK_MIN_XY[0], DESK_MIN_XY[1], 0.0),
-            xyz_max=vector3(DESK_MAX_XY[0], DESK_MAX_XY[1], DESK_HEIGHT),
+            xyz_max=vector3(DESK_MAX_XY[0], DESK_MAX_XY[1], DESK_HEIGHT + 0.01),
         )
+        table_surface_c.add_x_padding(0.03)
+        table_surface_c.add_y_padding(0.03)
+
         obstacles = [table_surface_c]
         obstacle_names = ["table_surface"]
+        visualize_cuboids_in_rviz("obstacle_world", obstacles)
 
         # Create and instantiate the collision world
         cw = CollisionWorld(
             "global_collision_world"
         )  # Needs to be 'global_collision_world' for some reason. See L181 in /opt/ros/noetic/lib/python3/dist-packages/hsrb_interface/settings.py
         for obstacle, name in zip(obstacles, obstacle_names):
-            # visualize_cuboid_in_rviz(obstacle)
             widths = obstacle.widths
             cw.add_box(
                 x=widths.x,
@@ -60,10 +63,6 @@ class HsrbRobot:
         self._robot = robot
         self._omni_base = robot.get("omni_base")
         self._whole_body = robot.get("whole_body")
-
-        # CollisionWorld
-        # self._collision_world = get_collision_world()
-
         self._gripper = robot.get("gripper")
         self._speaker = robot.get("default_tts")
 
@@ -96,21 +95,18 @@ class HsrbRobot:
     # ------------------------------------------------------------------------------------------------------------------
     #                                               Actions
 
-    def grasp_bottle(self, bottle: Bottle) -> bool:
-        print("\n------------------------------------------", flush=True)
+    def grasp_bottle(self, bottle: Bottle, print_header: bool = False) -> bool:
+        if print_header:
+            print("\n------------------------------------------", flush=True)
         print("HsrbRobot.grasp_bottle() - Grasping bottle", flush=True)
         self.move_to_neural()
         print(f"current end effector pose: {self.get_end_effector_pose()}")
         self.open_gripper()
         print("Setting collision_world")
 
-        # TODO: It seems like collision world is not being accounted for. Inflate the cw more. Then .. ?
-        self.whole_body.collision_world = (
-            get_collision_world()
-        )  # Note: collision_world needs to be set every time for some reason
-
+        # Find grasp pose
+        #
         print("                         - Moving end effector to grasp pose", flush=True)
-
         bottle_pose = bottle.tf.pose_hsrb_format()
         grasp_position = vector3(
             x=bottle_pose.pos.x, y=bottle_pose.pos.y, z=bottle_pose.pos.z + SODA_CAN_HEIGHT / 2.0
@@ -119,8 +115,57 @@ class HsrbRobot:
         grasp_pose = HsrbPose(grasp_position, grasp_rotation)
         visualize_tf_in_rviz("grasp_pose_tf", _hsrb_pose_to_transform(grasp_pose))
 
+        # Setup collision map
+        #
+        self.whole_body.collision_world = None
+        # Note: There is a ton of weirdness with the collision world stuff. sometimes its ignored
+        collision_world = get_collision_world()
+        self.whole_body.collision_world = collision_world
+
         self.whole_body.move_end_effector_pose(grasp_pose, ref_frame_id="map")
-        # gripper.apply_force(0.5, delicate=True)
+        print("                         - Closing gripper", flush=True)
+        self.gripper.apply_force(0.5, delicate=True)
+        print("                         - Grasped bottle. moving back to base pose", flush=True)
+
+        self.move_base_to(DESK_TARGET_POSE, print_header=False)
+        return True
+
+    def place_currently_grasped_bottle(
+        self, place_location: Vector3, cleaned_bottles: List[Bottle], print_header: bool = False
+    ) -> bool:
+        if print_header:
+            print("\n------------------------------------------", flush=True)
+        print("HsrbRobot.grasp_bottle() - Placing bottle", flush=True)
+        self.move_base_to(DESK_CLEAN_TARGET_POSE, print_header=False)
+
+        # Get target pose
+        target_pose = vector3(place_location.x, place_location.y, place_location.z + SODA_CAN_HEIGHT / 2.0)
+        target_rotation = _END_EFF_FLAT_ROTATION
+        target_pose = HsrbPose(target_pose, target_rotation)
+        visualize_tf_in_rviz("grasp_pose_tf", _hsrb_pose_to_transform(target_pose))
+
+        # Setup collision
+        collision_world = get_collision_world()
+        self.whole_body.collision_world = collision_world
+
+        self.whole_body.move_to_joint_positions({"arm_lift_joint": 0.2})
+
+        # Move to target pose
+        try:
+            self.whole_body.move_end_effector_pose(target_pose, ref_frame_id="map")
+        except FollowTrajectoryError:
+            print(
+                "                         - Failed to move to target pose"
+                " ('hsrb_interface.exceptions.FollowTrajectoryError')",
+                flush=True,
+            )
+            return False
+
+        print("                         - Opening gripper", flush=True)
+        self.open_gripper()
+        print("                         - Placed bottle. moving back to base pose", flush=True)
+        self.move_base_to(DESK_CLEAN_TARGET_POSE, print_header=False)
+        return True
 
     def open_gripper(self):
         """From the docs: "The hand uses slightly different commands than the other joints. The command function is used
@@ -145,7 +190,9 @@ class HsrbRobot:
         """Look at a point. Will not self-collide"""
         self.whole_body.gaze_point(point=position, ref_frame_id="base_link")
 
-    def move_base_to(self, pose: Tuple[float, float, float]):
+    def move_base_to(self, pose: Tuple[float, float, float], print_header: bool = True) -> None:
+        if print_header:
+            print("\n------------------------------------------", flush=True)
         print("HsrbRobot.move_base_to() - Moving to pose:", pose, flush=True)
         print("                         - Current pose:", self.omni_base.get_pose(), flush=True)
         try:

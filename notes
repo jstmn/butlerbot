@@ -28,6 +28,33 @@ rostopic echo /clicked_point # then 'Publish Point' in Rviz
 
 
 
+
+# -----------
+# Test grasping
+
+ihsrb
+
+def reset():
+    omni_base.go_abs(0,0,0)
+    whole_body.move_to_neutral()
+    collision_world.remove_all()
+
+reset()
+
+collision_world.add_box(x=0.5, y=0.75, z=.7, pose=geometry.pose(x=1.0, y=0.0, z=0.35), frame_id='map') # desk height is .7
+whole_body.collision_world = collision_world
+
+
+q = geometry.quaternion(x=0.7071068, y=0, z=0.7071068, w=0)
+target_pose=geometry.Pose(pos=geometry.vector3(x=1.0, y=0.0, z=0.8), ori=q)
+whole_body.move_end_effector_pose(pose=target_pose, ref_frame_id="map")
+
+
+# old
+target_pose=geometry.Pose(pos=geometry.vector3(x=0.5, y=0.0, z=0.8), ori=q)
+whole_body.move_end_effector_pose(pose=pose, ref_frame_id="map")
+
+
 # -----------
 # Development
 
