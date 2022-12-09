@@ -694,7 +694,7 @@ Visualization Manager:
       Marker Topic: /collision_environment_marker_array
       Name: CollisionWorld
       Namespaces:
-        object_markers: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -702,7 +702,7 @@ Visualization Manager:
       Marker Topic: /obstacle_world
       Name: MarkerArray
       Namespaces:
-        "": true
+        {}
       Queue Size: 100
       Value: true
   Enabled: true
@@ -741,17 +741,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 3.13454532623291
-        Y: -0.31944209337234497
-        Z: 0.7389878034591675
+        X: 2.977022409439087
+        Y: -0.40700647234916687
+        Z: 0.6062363386154175
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.6297975778579712
+      Pitch: 0.5847975015640259
       Target Frame: <Fixed Frame>
-      Yaw: 2.6060385704040527
+      Yaw: 3.7860372066497803
     Saved: ~
 Window Geometry:
   Displays:
@@ -775,9 +775,9 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1882
-  X: 138
+  X: 135
   XtionDepth:
     collapsed: false
   XtionImage:
     collapsed: false
-  Y: 34
+  Y: 49
