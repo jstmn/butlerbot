@@ -42,6 +42,10 @@ class Cuboid:
         self.xyz_min = vector3(x=self.xyz_min.x, y=self.xyz_min.y - padding, z=self.xyz_min.z)
         self.xyz_max = vector3(x=self.xyz_max.x, y=self.xyz_max.y + padding, z=self.xyz_max.z)
 
+    def add_z_padding(self, padding: float):
+        self.xyz_min = vector3(x=self.xyz_min.x, y=self.xyz_min.y, z=self.xyz_min.z - padding)
+        self.xyz_max = vector3(x=self.xyz_max.x, y=self.xyz_max.y, z=self.xyz_max.z + padding)
+
     def get_ros_marker(self, frame_id: str = "map") -> Marker:
         marker = Marker()
         marker.header.frame_id = frame_id
@@ -88,6 +92,8 @@ class Cuboid:
         assert self.xyz_min.x <= self.xyz_max.x
         assert self.xyz_min.y <= self.xyz_max.y
         assert self.xyz_min.z <= self.xyz_max.z
+        assert isinstance(self.xyz_min, Vector3)
+        assert isinstance(self.xyz_max, Vector3)
 
 
 @dataclass
@@ -110,6 +116,10 @@ class Transform:
 
     def __str__(self):
         return f"[Transform[{self.name}] position: {self.position}, rotation: {self.rotation}]"
+
+    def __post_init__(self):
+        assert isinstance(self.position, Vector3)
+        assert isinstance(self.rotation, Quaternion)
 
 
 class Bottle:

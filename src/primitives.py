@@ -7,8 +7,12 @@ from src.hsrb_robot import HsrbRobot
 from hsrb_interface.geometry import vector3, Vector3, Quaternion
 
 
-def get_bottle_to_grasp(robot: HsrbRobot, bottles: List[Bottle]) -> Bottle:
+def get_bottle_to_grasp(robot: HsrbRobot, bottles: List[Bottle], print_header=True) -> Bottle:
     """Return the closest bottle to the robot"""
+    if print_header:
+        print("\n-----------------------------------")
+        print("  --- Getting bottle to grasp ---  \n")
+
     robot_xy = robot.base_xy_pose()
     robot_point = Vector3(x=robot_xy[0], y=robot_xy[1], z=DESK_HEIGHT)
     distances = [bottle.distance_to_point(robot_point) for bottle in bottles]
