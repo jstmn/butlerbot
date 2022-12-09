@@ -1,3 +1,4 @@
+from typing import Union
 from dataclasses import dataclass
 
 from src.constants import *
@@ -78,15 +79,27 @@ class Cuboid:
         marker.pose.orientation.w = 1.0
         return marker
 
-    def enclosed_in(self, other: "Cuboid") -> bool:
-        return (
-            self.xyz_min.x >= other.xyz_min.x
-            and self.xyz_min.y >= other.xyz_min.y
-            and self.xyz_min.z >= other.xyz_min.z
-            and self.xyz_max.x <= other.xyz_max.x
-            and self.xyz_max.y <= other.xyz_max.y
-            and self.xyz_max.z <= other.xyz_max.z
-        )
+    def enclosed_in(self, other: Union["Cuboid", "Sphere"]) -> bool:
+        if isinstance(other, Sphere):
+            sphere_square_approx = Cuboid(
+                xyz_min=vector3(
+                    x=other.center.x - other.radius, y=other.center.y - other.radius, z=other.center.z - other.radius
+                ),
+                xyz_max=vector3(
+                    x=other.center.x + other.radius, y=other.center.y + other.radius, z=other.center.z + other.radius
+                ),
+            )
+            return self.enclosed_in(sphere_square_approx)
+
+        elif isinstance(other, Cuboid):
+            return (
+                self.xyz_min.x >= other.xyz_min.x
+                and self.xyz_min.y >= other.xyz_min.y
+                and self.xyz_min.z >= other.xyz_min.z
+                and self.xyz_max.x <= other.xyz_max.x
+                and self.xyz_max.y <= other.xyz_max.y
+                and self.xyz_max.z <= other.xyz_max.z
+            )
 
     def __post_init__(self):
         assert self.xyz_min.x <= self.xyz_max.x
@@ -94,6 +107,17 @@ class Cuboid:
         assert self.xyz_min.z <= self.xyz_max.z
         assert isinstance(self.xyz_min, Vector3)
         assert isinstance(self.xyz_max, Vector3)
+
+
+@dataclass
+class Sphere:
+    center: Vector3
+    radius: float
+
+    def __post_init__(self):
+        assert isinstance(self.center, Vector3)
+        assert isinstance(self.radius, float)
+        assert self.radius >= 0
 
 
 @dataclass
@@ -145,7 +169,7 @@ class Bottle:
     def tf(self) -> Transform:
         return self._tf
 
-    def in_area(self, cube: Cuboid) -> bool:
+    def in_area(self, cube: Union[Cuboid, Sphere]) -> bool:
         return self._bounding_cube.enclosed_in(cube)
 
     def distance_to_point(self, point: Vector3) -> float:

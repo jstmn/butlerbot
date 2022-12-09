@@ -88,8 +88,3 @@ def visualize_tf_set_in_rviz(topic_name: str, tfs: List[Transform]):
     stamped_tfs_ros.header.frame_id = "map"
     stamped_tfs_ros.header.stamp = rospy.Time.now()
     tf_sets_pub[topic_name].publish(stamped_tfs_ros)
-
-
-# if __name__ == "__main__":
-#     CLEAN_AREA = Cuboid(vector3(CLEAN_AREA_MIN_XY[0], CLEAN_AREA_MIN_XY[1], 0.0), vector3(CLEAN_AREA_MAX_XY[0], CLEAN_AREA_MAX_XY[1], 1.5))
-#     visualize_cuboid_in_rviz(CLEAN_AREA)

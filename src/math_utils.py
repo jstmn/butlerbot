@@ -8,6 +8,22 @@ import numpy as np
 ZERO_VECTOR3 = vector3(0, 0, 0)
 
 
+def vec_addition(v1: Vector3, v2: Vector3) -> Vector3:
+    return vector3(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z)
+
+
+def vec_negation(v: Vector3) -> Vector3:
+    return vector3(-v.x, -v.y, -v.z)
+
+
+def vec_scaled(v: Vector3, alpha: float) -> Vector3:
+    return vector3(v.x * alpha, v.y * alpha, v.z * alpha)
+
+
+def vec_distance(v: Vector3) -> Vector3:
+    return np.sqrt(v.x**2 + v.y**2 + v.z**2)
+
+
 def distance_between_vector3s(v1: Vector3, v2: Vector3) -> float:
     return np.sqrt((v1.x - v2.x) ** 2 + (v1.y - v2.y) ** 2 + (v1.z - v2.z) ** 2)
 

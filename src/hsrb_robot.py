@@ -1,5 +1,7 @@
 from typing import List, Tuple
 
+
+from src.math_utils import vec_addition, vec_negation, vec_scaled, vec_distance
 from src.supporting_types import Cuboid, Bottle, Transform
 from src.gazebo_utils import visualize_tf_in_rviz, visualize_cuboids_in_rviz
 from src.constants import *
@@ -61,6 +63,7 @@ class HsrbRobot:
         self._robot = robot
         self._omni_base = robot.get("omni_base")
         self._whole_body = robot.get("whole_body")
+        self.whole_body.collision_world = CollisionWorld("global_collision_world")
         self._gripper = robot.get("gripper")
         self._speaker = robot.get("default_tts")
 
@@ -141,6 +144,33 @@ class HsrbRobot:
         self.whole_body.move_to_neutral()
         print("done")
 
+    def get_bottle_to_robot_vector(self, bottle: Bottle) -> Vector3:
+        bottle_pose = bottle.tf.pose_hsrb_format()
+        robot_xy = self.base_xy_pose()
+        robot_position = vector3(x=robot_xy[0], y=robot_xy[1], z=DESK_HEIGHT)
+        return vec_addition(robot_position, vec_negation(bottle_pose.pos))
+
+    def _get_grasp_pose(self, bottle: Bottle) -> Tuple[HsrbPose, float]:
+        """Get the pose the end effector should move to in order to grasp the bottle. Assumes there will be a scooping
+        motion to collect the bottle.
+
+        Args:
+            bottle (Bottle): The bottle to grasp
+        """
+        bottle_pose = bottle.tf.pose_hsrb_format()
+        alpha = 0.1
+
+        # Grasp at the mid height of the can
+        adjusted_bottle_position = vec_addition(bottle_pose.pos, vector3(z=SODA_CAN_HEIGHT / 2.0))
+        bottle_to_robot_vec = self.get_bottle_to_robot_vector(bottle)
+
+        adjusted_bottle_position = vec_addition(adjusted_bottle_position, vec_scaled(bottle_to_robot_vec, alpha))
+
+        grasp_rotation = _END_EFF_FLAT_ROTATION  # TODO: Rotate quaternion about z-axis by the approach angle
+        grasp_pose = HsrbPose(adjusted_bottle_position, grasp_rotation)
+
+        return grasp_pose, vec_distance(bottle_to_robot_vec) * alpha
+
     def grasp_bottle(self, bottle: Bottle, print_header: bool = False) -> bool:
         if print_header:
             print("\n---------------------------", flush=True)
@@ -151,19 +181,11 @@ class HsrbRobot:
         self.open_gripper()
 
         # Find grasp pose
-        bottle_pose = bottle.tf.pose_hsrb_format()
-        grasp_position = vector3(
-            x=bottle_pose.pos.x, y=bottle_pose.pos.y, z=bottle_pose.pos.z + SODA_CAN_HEIGHT / 2.0
-        )  # Grasp at the mid height of the can
-        grasp_rotation = _END_EFF_FLAT_ROTATION
-        grasp_pose = HsrbPose(grasp_position, grasp_rotation)
+        grasp_pose, dist_to_can = self._get_grasp_pose(bottle)
         visualize_tf_in_rviz("grasp_pose_tf", _hsrb_pose_to_transform(grasp_pose))
 
         # Setup collision map
-        # self.whole_body.collision_world = None
         # Note: There is a ton of weirdness with the collision world stuff. sometimes its ignored. This is likely the motion planners fault
-        # collision_world = get_collision_world()
-        # self.whole_body.collision_world = collision_world
         update_collision_world(self.whole_body.collision_world)
 
         #
@@ -177,7 +199,7 @@ class HsrbRobot:
         # Move the gripper forward by 5cm to help scoop the can
         print("  doing scoop", flush=True)
         try:
-            self.whole_body.move_end_effector_by_line((0, 0, 1), 0.025)
+            self.whole_body.move_end_effector_by_line((0, 0, 1), dist_to_can)
         except MotionPlanningError as e:
             print("  failed to do scoop. Aborting grasp", flush=True)
             print(f"  error: '{e}'")
@@ -203,16 +225,9 @@ class HsrbRobot:
         self.move_base_to(DESK_CLEAN_TARGET_POSE)
 
         # Get target pose
-        target_pose = vector3(place_location.x, place_location.y, place_location.z + SODA_CAN_HEIGHT / 2.0)
         target_rotation = _END_EFF_FLAT_ROTATION
-        target_pose = HsrbPose(target_pose, target_rotation)
+        target_pose = HsrbPose(place_location, target_rotation)
         visualize_tf_in_rviz("grasp_pose_tf", _hsrb_pose_to_transform(target_pose))
-
-        # Setup collision
-        collision_world = get_collision_world()
-        self.whole_body.collision_world = collision_world
-
-        # self.whole_body.move_to_joint_positions({"arm_lift_joint": 0.2})
 
         # Move to target pose
         try:

@@ -11,8 +11,17 @@ if GAZEBO_MODE:
     DESK_MIN_XY = (2.2197, -0.902)
     DESK_MAX_XY = (3.4167, -0.3168)
 
-    CLEAN_AREA_MIN_XY = (2.2714, -0.6963)
-    CLEAN_AREA_MAX_XY = (2.5979, -0.3967)
+    # ave: 2.43465 -0.5465
+    # gazebo is (+5, +6.6) from rviz
+    # -> 7.43465 6.0535
+    # CLEAN_AREA_MIN_XY = (2.2714, -0.6963)
+    # CLEAN_AREA_MAX_XY = (2.5979, -0.3967)
+
+    BASKET_POSE = (2.43465, -0.5465, DESK_HEIGHT)
+    BASKET_RADIUS = 0.1933
+
+    # .1967, .1943, .1933
+
     DESK_TARGET_POSE = (2.75, 0.25, 3 / 2 * PI)  # (x, y, yaw)
     DESK_CLEAN_TARGET_POSE = (2.45, 0.25, 3 / 2 * PI)  # (x, y, yaw)
 

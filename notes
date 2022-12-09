@@ -47,8 +47,10 @@ collision_pose=geometry.Pose(
 non_collision_pose=geometry.Pose(
     pos=geometry.vector3(x=curr_x+1.0, y=curr_y, z=0.8), ori=geometry.quaternion(x=0.7071068, y=0, z=0.7071068, w=0))
 
+#
 reset(curr_x, curr_y)
 add_box(curr_x, curr_y)
+whole_body.move_end_effector_pose(pose=non_collision_pose, ref_frame_id="map")
 whole_body.move_end_effector_pose(pose=collision_pose, ref_frame_id="map")
 
 reset(curr_x, curr_y)
@@ -63,6 +65,19 @@ add_box(curr_x, curr_y)
 whole_body.move_end_effector_pose(pose=non_collision_pose, ref_frame_id="map")
 # succcess, now avoids
 reset(curr_x, curr_y)
+
+
+# Note: A success sequence was move_to(non_colliding) and let finish all the way (it waits for a while then moves again)
+
+
+# test if in bad state
+reset(curr_x, curr_y)
+add_box(curr_x, curr_y)
+whole_body.move_end_effector_pose(pose=non_collision_pose, ref_frame_id="map")
+
+whole_body.move_end_effector_pose(pose=collision_pose, ref_frame_id="map")
+
+
 
 
 
