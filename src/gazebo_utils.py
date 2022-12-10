@@ -64,7 +64,7 @@ tf_sets_pub = {"can_tfs": rospy.Publisher("/can_tfs", PoseArray, queue_size=2)}
 
 def visualize_cuboids_in_rviz(alias: str, cubes: List[Cuboid]):
     assert alias in marker_set_pubs, f"Invalid alias: {alias}"
-    markers = [cube.get_ros_marker(frame_id="map") for cube in cubes]
+    markers = [cube.get_ros_marker(frame_id="map", id=i) for i, cube in enumerate(cubes)]
     marker_array = MarkerArray(markers=markers)
     marker_set_pubs[alias].publish(marker_array)
 

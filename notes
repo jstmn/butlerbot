@@ -28,9 +28,8 @@ rostopic echo /clicked_point # then 'Publish Point' in Rviz
 
 
 
-
-# -----------
-# Get collision avoidance working
+# -----------------------------------------
+#   -- Get collision avoidance working --
 
 curr_x, curr_y = omni_base.get_pose()[0].x, omni_base.get_pose()[0].y
 def reset(curr_x, curr_y):
@@ -51,31 +50,13 @@ non_collision_pose=geometry.Pose(
 reset(curr_x, curr_y)
 add_box(curr_x, curr_y)
 whole_body.move_end_effector_pose(pose=non_collision_pose, ref_frame_id="map")
-whole_body.move_end_effector_pose(pose=collision_pose, ref_frame_id="map")
-
+# Wait for the arm to move twice (second move to its target)
+# ...
+# Now, verify it avoids the box
 reset(curr_x, curr_y)
 add_box(curr_x, curr_y)
 whole_body.move_end_effector_pose(pose=non_collision_pose, ref_frame_id="map")
-# Didn't work - collides into box
-whole_body.move_end_effector_pose(pose=collision_pose, ref_frame_id="map")
-# start state in collision
-
-reset(curr_x, curr_y)
-add_box(curr_x, curr_y)
-whole_body.move_end_effector_pose(pose=non_collision_pose, ref_frame_id="map")
-# succcess, now avoids
-reset(curr_x, curr_y)
-
-
-# Note: A success sequence was move_to(non_colliding) and let finish all the way (it waits for a while then moves again)
-
-
-# test if in bad state
-reset(curr_x, curr_y)
-add_box(curr_x, curr_y)
-whole_body.move_end_effector_pose(pose=non_collision_pose, ref_frame_id="map")
-
-whole_body.move_end_effector_pose(pose=collision_pose, ref_frame_id="map")
+# Now, it should have avoided the box
 
 
 
@@ -96,31 +77,6 @@ omni_base.go_abs(0,0,0)
 whole_body.move_end_effector_pose(geometry.pose(z=1.5), 'hand_palm_link')
 
 
-# -----------
-# Test grasping
-
-ihsrb
-
-def reset():
-    omni_base.go_abs(0,0,0)
-    whole_body.move_to_neutral()
-    collision_world.remove_all()
-reset()
-
-collision_world.add_box(x=0.5, y=0.75, z=.7, pose=geometry.pose(x=1.0, y=0.0, z=0.35), frame_id='map') # desk height is .7
-whole_body.collision_world = collision_world
-
-non_colliding_target_pose=geometry.Pose(pos=geometry.vector3(x=0.5, y=0.0, z=0.8), ori=geometry.quaternion(x=0.7071, y=0, z=0.7071, w=0))
-whole_body.move_end_effector_pose(pose=non_colliding_target_pose, ref_frame_id="map")
-
-target_pose=geometry.Pose(pos=geometry.vector3(x=1.0, y=0.0, z=0.8), ori=geometry.quaternion(x=0.7071, y=0, z=0.7071, w=0))
-whole_body.move_end_effector_pose(pose=target_pose, ref_frame_id="map")
-
-
-
-
-whole_body.collision_world = None
-whole_body.collision_world = collision_world
 
 # -----------
 # Investigate joint changing when it shouldn't

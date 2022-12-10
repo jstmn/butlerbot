@@ -22,15 +22,19 @@ import rospy
 import gazebo_msgs.msg
 
 
+# Clean area is where the trash can is
+_BASKET_AREA = Cuboid(
+    xyz_min=vector3(BASKET_XY[0] - BASKET_RADIUS, BASKET_XY[1] - BASKET_RADIUS, DESK_HEIGHT),
+    xyz_max=vector3(BASKET_XY[0] + BASKET_RADIUS, BASKET_XY[1] + BASKET_RADIUS, DESK_HEIGHT + BASKET_HEIGHT),
+)
+_BASKET_AREA.add_x_padding(0.05)
+_BASKET_AREA.add_y_padding(0.05)
+CLEAN_AREA = _BASKET_AREA
+visualize_cuboid_in_rviz("clean_area", CLEAN_AREA)  # pubs to 'visualization_marker'
+
+#
 _robot = hsrb_interface.Robot()
-robot = HsrbRobot(_robot)
-
-# TODO: Load a larger trash basket into gazebo. The salad bowl is too small
-
-# Clean area is where the tray is
-# visualize_cuboid_in_rviz("clean_area", CLEAN_AREA)  # pubs to 'visualization_marker'
-CLEAN_AREA = Sphere(vector3(*BASKET_POSE), BASKET_RADIUS)  # TODO: Increase BASKET_RADIUS
-
+robot = HsrbRobot(_robot, _BASKET_AREA)
 
 # Update the ground truth bottle poses (from gazebo) at a fixed frequency
 BOTTLE_POSES_GT: List[Transform] = []
@@ -80,7 +84,7 @@ if __name__ == "__main__":
     rospy.sleep(1.0)
     robot.say("Hello. My name is Mr. Butler. I will now clean the table")
 
-    # robot.initialize_manipulation(print_header=True)
+    robot.initialize_manipulation(print_header=True)
 
     # Move to the table
     robot.move_base_to(DESK_TARGET_POSE, print_header=True)
