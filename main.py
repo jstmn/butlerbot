@@ -23,6 +23,10 @@ import gazebo_msgs.msg
 
 
 # Clean area is where the trash can is
+_TABLE_AREA = Cuboid(
+    xyz_min=vector3(DESK_MIN_XY[0], DESK_MIN_XY[1], DESK_HEIGHT - 2 * SODA_CAN_HEIGHT),
+    xyz_max=vector3(DESK_MAX_XY[0], DESK_MAX_XY[1], DESK_HEIGHT + 2 * SODA_CAN_HEIGHT),
+)
 _BASKET_AREA = Cuboid(
     xyz_min=vector3(BASKET_XY[0] - BASKET_RADIUS, BASKET_XY[1] - BASKET_RADIUS, DESK_HEIGHT),
     xyz_max=vector3(BASKET_XY[0] + BASKET_RADIUS, BASKET_XY[1] + BASKET_RADIUS, DESK_HEIGHT + BASKET_HEIGHT),
@@ -75,7 +79,10 @@ roslaunch hsrb_gazebo_launch hsrb_butler_bot_world.launch
 # Terminal 2:
 rostopic echo /clicked_point    # then 'Publish Point' in Rviz
 
-# Terminal 3:
+# After every new gazebo roslaunch, run 
+python3 initialize_robot.py
+
+# After initialize_robot.py finishes:
 python3 main.py
 """
 
@@ -83,8 +90,6 @@ if __name__ == "__main__":
     print("Sleeping for 1 seconds to allow the robot to initialize", flush=True)
     rospy.sleep(1.0)
     robot.say("Hello. My name is Mr. Butler. I will now clean the table")
-
-    robot.initialize_manipulation(print_header=True)
 
     # Move to the table
     robot.move_base_to(DESK_TARGET_POSE, print_header=True)
@@ -94,10 +99,17 @@ if __name__ == "__main__":
         bottles = scan_for_bottles_wrapper(robot, print_header=True)
 
         # Find all bottles that are out of place
-        out_of_place_bottles = [bottle for bottle in bottles if not bottle.in_area(CLEAN_AREA)]
+        out_of_place_bottles = [
+            bottle for bottle in bottles if (bottle.in_area(_TABLE_AREA) and not bottle.in_area(_BASKET_AREA))
+        ]
         cleaned_bottles = [bottle for bottle in bottles if bottle.in_area(CLEAN_AREA)]
-        assert len(out_of_place_bottles) + len(cleaned_bottles) == len(bottles)
-        robot.say(f"Located {len(cleaned_bottles)} clean bottles, and {len(out_of_place_bottles)} out of place bottles")
+        dropped_bottles = [
+            bottle for bottle in bottles if (not bottle.in_area(CLEAN_AREA) and not bottle.in_area(_TABLE_AREA))
+        ]
+        robot.say(
+            f"Located {len(cleaned_bottles)} clean bottles, {len(out_of_place_bottles)} out of place bottles on the"
+            f" table, and {len(dropped_bottles)} bottles elsewhere"
+        )
 
         # Mission complete if there are no bottles out of place
         if len(out_of_place_bottles) == 0:
@@ -110,7 +122,7 @@ if __name__ == "__main__":
         robot.look_at(bottle_to_grasp.tf.position)
 
         # Grasp the bottle
-        grasp_successful = robot.grasp_bottle(bottle_to_grasp)
+        grasp_successful = robot.grasp_bottle(bottle_to_grasp, print_header=True)
         if not grasp_successful:
             # TODO: What to do in this case
             break
@@ -118,7 +130,7 @@ if __name__ == "__main__":
         bottle_place_location = get_bottle_place_location(CLEAN_AREA, cleaned_bottles)
         print(f"Bottle place location: {bottle_place_location}", flush=True)
 
-        bottled_placed = robot.place_currently_grasped_bottle(bottle_place_location, cleaned_bottles)
+        bottled_placed = robot.place_currently_grasped_bottle(bottle_place_location, cleaned_bottles, print_header=True)
         if not bottled_placed:
             print("Failed to place bottle, aborting", flush=True)
             break

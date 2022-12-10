@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Tuple
 from dataclasses import dataclass
 
 from src.constants import *
@@ -47,7 +47,9 @@ class Cuboid:
         self.xyz_min = vector3(x=self.xyz_min.x, y=self.xyz_min.y, z=self.xyz_min.z - padding)
         self.xyz_max = vector3(x=self.xyz_max.x, y=self.xyz_max.y, z=self.xyz_max.z + padding)
 
-    def get_ros_marker(self, frame_id: str = "map", id: int = 0) -> Marker:
+    def get_ros_marker(
+        self, frame_id: str = "map", id: int = 0, color: Tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.2)
+    ) -> Marker:
         marker = Marker()
         marker.header.frame_id = frame_id
         marker.header.stamp = rospy.Time.now()
@@ -63,10 +65,10 @@ class Cuboid:
         marker.scale.z = widths.z
 
         # Set the color
-        marker.color.r = 0.0
-        marker.color.g = 1.0
-        marker.color.b = 0.0
-        marker.color.a = 0.5
+        marker.color.r = color[0]
+        marker.color.g = color[1]
+        marker.color.b = color[2]
+        marker.color.a = color[3]
 
         # Set the pose of the marker
         midpoint = self.midpoint

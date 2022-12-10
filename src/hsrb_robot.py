@@ -119,30 +119,18 @@ class HsrbRobot:
         self.whole_body.move_end_effector_pose(pose=non_collision_pose, ref_frame_id="map")
         print("sleeping to allow motion to complete")
 
-        error = vector_distance(self.get_end_effector_pose().position, non_collision_pose.pos)
-        if error < 0.05:
-            print(
-                "Action completed successfully which indicates the robot software is in the good state - meaning the"
-                " motion planner is avoiding obstacles. exiting function early"
-            )
-            reset(curr_x, curr_y)
-            self._initialize_collision_world()
-            return
-
         while True:
             error = vector_distance(self.get_end_effector_pose().position, non_collision_pose.pos)
             if error < 0.05:
-                break
+                print(
+                    "Action completed successfully which indicates the robot software is in the good state - meaning"
+                    " the motion planner is avoiding obstacles. exiting function early"
+                )
+                reset(curr_x, curr_y)
+                self._initialize_collision_world()
+                return
             print("end effector error: ", round(error, 4), " - sleeping", flush=True)
-            sleep(0.5)
-
-        print("Done sleeping. repeating action - this time it should avoid the box")
-        reset(curr_x, curr_y)
-        add_box(curr_x, curr_y)
-        self.whole_body.move_end_effector_pose(pose=non_collision_pose, ref_frame_id="map")
-        reset(curr_x, curr_y)
-        print("Done")
-        self._initialize_collision_world()
+            sleep(1.0)
 
     def get_bottle_to_robot_vector(self, bottle: Bottle) -> Vector3:
         bottle_pose = bottle.tf.pose_hsrb_format()
@@ -159,9 +147,10 @@ class HsrbRobot:
         """
         bottle_pose = bottle.tf.pose_hsrb_format()
         alpha = 0.1
+        grasp_height_offset = (SODA_CAN_HEIGHT / 2.0) + 0.02
 
         # Grasp at the mid height of the can
-        adjusted_bottle_position = vec_addition(bottle_pose.pos, vector3(z=SODA_CAN_HEIGHT / 2.0))
+        adjusted_bottle_position = vec_addition(bottle_pose.pos, vector3(z=grasp_height_offset))
         bottle_to_robot_vec = self.get_bottle_to_robot_vector(bottle)
         adjusted_bottle_position = vec_addition(adjusted_bottle_position, vec_scaled(bottle_to_robot_vec, alpha))
         grasp_rotation = _END_EFF_FLAT_ROTATION  # TODO: Rotate quaternion about z-axis by the approach angle
@@ -189,6 +178,7 @@ class HsrbRobot:
         self.move_to_neural()
         self.open_gripper()
 
+        # TODO: Update rotate grasp pose along +z axis by the approach angle
         # Find grasp pose
         grasp_pose, dist_to_can = self._get_grasp_pose(bottle)
         visualize_tf_in_rviz("grasp_pose_tf", _hsrb_pose_to_transform(grasp_pose))
@@ -203,8 +193,11 @@ class HsrbRobot:
 
         # Move the gripper forward by 5cm to help scoop the can
         print("  doing scoop", flush=True)
+        print(f"  dist_to_can: {dist_to_can}", flush=True)
+        scoop_distance = 0.05
+        print(f"  scoop_distance: {scoop_distance}", flush=True)
         try:
-            self.whole_body.move_end_effector_by_line((0, 0, 1), dist_to_can)
+            self.whole_body.move_end_effector_by_line((0, 0, 1), scoop_distance)
         except MotionPlanningError as e:
             print("  failed to do scoop. Aborting grasp", flush=True)
             print(f"  error: '{e}'")
@@ -216,7 +209,6 @@ class HsrbRobot:
 
         # Return to base pose
         print("  grasped bottle. moving back to base pose", flush=True)
-        self.move_base_to(DESK_TARGET_POSE)
         print("done")
         return True
 
@@ -227,7 +219,7 @@ class HsrbRobot:
             print("\n--------------------------------------------", flush=True)
             print("  --- Placing currently grasped bottle ---  \n", flush=True)
 
-        self.move_base_to(DESK_CLEAN_TARGET_POSE)
+        # self.move_base_to(DESK_CLEAN_TARGET_POSE)
 
         # Get target pose
         target_rotation = _END_EFF_FLAT_ROTATION
@@ -243,6 +235,13 @@ class HsrbRobot:
 
         print("  Opening gripper", flush=True)
         self.open_gripper()
+
+        print("  moving backwards by x=-0.5", flush=True)
+        self.omni_base.go_rel(x=-0.5)
+
+        print("  resetting to go pose", flush=True)
+        self.whole_body.move_to_go()
+
         print("  Placed bottle. moving back to base pose", flush=True)
         self.move_base_to(DESK_CLEAN_TARGET_POSE)
         return True

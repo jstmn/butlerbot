@@ -18,6 +18,7 @@ def get_bottle_to_grasp(robot: HsrbRobot, bottles: List[Bottle], print_header=Tr
     robot_point = Vector3(x=robot_xy[0], y=robot_xy[1], z=DESK_HEIGHT)
     distances = [bottle.distance_to_point(robot_point) for bottle in bottles]
     min_idx = distances.index(min(distances))
+    print(f"  returning the closest bottle to the robot ({round(min(distances), 4)} m away)")
     return bottles[min_idx]
 
 
@@ -25,6 +26,7 @@ def am_currently_holding_a_bottle(robot: HsrbRobot) -> bool:
     raise NotImplementedError()
 
 
+# TODO: Lower the z height
 def get_bottle_place_location(clean_area: Cuboid, bottles: List[Bottle]) -> Vector3:
     """Return the location to place the bottle"""
     clean_area_midpoint = clean_area.midpoint
