@@ -1,6 +1,6 @@
 from typing import List, Tuple
 
-from hsrb_interface.geometry import quaternion, vector3, Vector3
+from hsrb_interface.geometry import quaternion, vector3, Vector3, Quaternion
 import tf
 
 import numpy as np
@@ -26,6 +26,15 @@ def vec_length(v: Vector3) -> Vector3:
 
 def vector_distance(v1: Vector3, v2: Vector3) -> float:
     return np.sqrt((v1.x - v2.x) ** 2 + (v1.y - v2.y) ** 2 + (v1.z - v2.z) ** 2)
+
+
+def quaternion_from_matrix(matrix: np.ndarray) -> Quaternion:
+    # See https://github.com/ros/geometry/issues/64
+    if matrix.shape == (3, 3):
+        _4x4 = np.eye(4)
+        _4x4[:3, :3] = matrix
+        matrix = _4x4
+    return quaternion(*tf.transformations.quaternion_from_matrix(matrix))
 
 
 # rotate vector v1 by quaternion q1

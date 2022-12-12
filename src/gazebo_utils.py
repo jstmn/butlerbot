@@ -57,6 +57,7 @@ marker_set_pubs = {"obstacle_world": rospy.Publisher("/obstacle_world", MarkerAr
 
 tf_pub = {
     "grasp_pose_tf": rospy.Publisher("/grasp_pose_tf", PoseStamped, queue_size=2),
+    "robot_pose_tf": rospy.Publisher("/robot_pose_tf", PoseStamped, queue_size=2),
 }
 
 tf_sets_pub = {"can_tfs": rospy.Publisher("/can_tfs", PoseArray, queue_size=2)}

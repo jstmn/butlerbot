@@ -324,27 +324,44 @@
     </include>
 
     <!-- Graspable -->
-    <include>
+
+    <!-- <include>
       <static>0</static>
-      <pose>8.0 6.0 0.765 0 0 1</pose>
+      <pose>7.72 6.115 0.765 0 0 1</pose>
       <uri>model://hsr_orange</uri>
       <name>hsr_orange_TOGRASP_0</name>
-    </include>
+    </include> -->
 
     <include>
       <static>0</static>
-      <pose>8.2 6.175 0.765 0 0 1</pose>
-      <uri>model://hsr_orange</uri>
-      <name>hsr_orange_TOGRASP_1</name>
-    </include>
-
-    <include>
-      <static>0</static>
-      <pose>8.0 6.2 0.765 0 0 1</pose>
+      <pose>7.8 6.2 0.765 0 0 1</pose>
       <uri>model://hsr_orange</uri>
       <name>hsr_orange_TOGRASP_2</name>
     </include>
+
+    <include>
+      <static>0</static>
+      <pose>8.05 6.12 0.765 0 0 1</pose>
+      <uri>model://hsr_orange</uri>
+      <name>hsr_orange_TOGRASP_3</name>
+    </include>
+
+    <include>
+      <static>0</static>
+      <pose>8.3 6.185 0.765 0 0 1</pose>
+      <uri>model://hsr_orange</uri>
+      <name>hsr_orange_TOGRASP_4</name>
+    </include>
+
     <!-- END OF Graspable -->
+
+
+    <include>
+      <static>0</static>
+      <pose>7.33465 6.0535 0.765 0 0 1</pose>
+      <uri>model://trash_bin</uri>
+      <name>trash_bin</name>
+    </include>
 
 
     <include>

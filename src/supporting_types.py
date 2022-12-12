@@ -171,6 +171,9 @@ class Bottle:
     def tf(self) -> Transform:
         return self._tf
 
+    def xy_coords(self) -> Tuple[float, float]:
+        return self._tf.position.x, self._tf.position.y
+
     def in_area(self, cube: Union[Cuboid, Sphere]) -> bool:
         return self._bounding_cube.enclosed_in(cube)
 

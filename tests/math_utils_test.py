@@ -6,8 +6,7 @@ sys.path.append(os.getcwd())
 
 from hsrb_interface.geometry import Vector3, Quaternion
 from hsrb_interface.geometry import quaternion, vector3
-from src.math_utils import rotate_vector
-
+from src.math_utils import *
 
 class TestBottle(unittest.TestCase):
 
@@ -15,6 +14,17 @@ class TestBottle(unittest.TestCase):
         self.assertAlmostEqual(vec1.x, vec2.x, places=6)
         self.assertAlmostEqual(vec1.y, vec2.y, places=6)
         self.assertAlmostEqual(vec1.z, vec2.z, places=6)
+
+    def test_quaternion_from_matrix(self):
+        r = np.array([
+            [0.0,  -1.0,  0.0],
+            [0.0,   0.0, -1.0],
+            [-1.0,  0.0,  0.0],
+        ])
+        q_returned = quaternion_from_matrix(r)
+        print(r)
+        print(q_returned)
+
 
     def test_rotate_vector(self):
 

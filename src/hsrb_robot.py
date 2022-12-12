@@ -1,7 +1,7 @@
 from typing import List, Tuple
-from time import sleep
+from time import time, sleep
 
-from src.math_utils import vec_addition, vec_negation, vec_scaled, vec_length, vector_distance
+from src.math_utils import *
 from src.supporting_types import Cuboid, Bottle, Transform
 from src.gazebo_utils import visualize_tf_in_rviz, visualize_cuboids_in_rviz
 from src.constants import *
@@ -11,21 +11,42 @@ from hsrb_interface.mobile_base import MobileBase
 from hsrb_interface.joint_group import JointGroup
 from hsrb_interface.end_effector import Gripper
 from hsrb_interface.collision_world import CollisionWorld
-from hsrb_interface.geometry import Vector3, vector3, quaternion
 from hsrb_interface.geometry import Pose as HsrbPose
 from hsrb_interface.geometry import pose as hsrb_pose
 from hsrb_interface.exceptions import FollowTrajectoryError, MotionPlanningError
-import rospy
 
 _MOVE_TIMEOUT = 30.0
+APPROACH_ALPHA = 0.07
+_THETA_OFFSET = np.deg2rad(-45)
+OMNI_BASE_GRASP_OFFSET = 0.2
 
-_END_EFF_FLAT_ROTATION = quaternion(
-    x=-0.5474032817174194, y=0.44796588933801107, z=-0.547040587681599, w=-0.44768605582883053
-)
+
+def R_x(theta: float) -> np.ndarray:
+    return np.array(
+        [
+            [1.0, 0, 0],
+            [0, np.cos(theta), -np.sin(theta)],
+            [0, np.sin(theta), np.cos(theta)],
+        ]
+    )
+
+
+def R_z(theta: float) -> np.ndarray:
+    return np.array(
+        [
+            [np.cos(theta), -np.sin(theta), 0],
+            [np.sin(theta), np.cos(theta), 0],
+            [0, 0, 1],
+        ]
+    )
 
 
 def _hsrb_pose_to_transform(pose: HsrbPose) -> Transform:
     return Transform(name="unnamed_pose", position=pose.pos, rotation=pose.ori)
+
+
+def _vec3_str(vec3: Vector3):
+    return "<{}, {}, {}>".format(round(vec3.x, 3), round(vec3.y, 3), round(vec3.z, 3))
 
 
 class HsrbRobot:
@@ -68,7 +89,7 @@ class HsrbRobot:
             )
             table_surface_c.add_x_padding(0.03)
             table_surface_c.add_y_padding(0.03)
-            table_surface_c.add_z_padding(0.02)
+            table_surface_c.add_z_padding(0.01)
 
             obstacles = [table_surface_c, self._basket_volume]
             obstacle_names = ["table_surface", "basket"]
@@ -118,25 +139,45 @@ class HsrbRobot:
         add_box(curr_x, curr_y)
         self.whole_body.move_end_effector_pose(pose=non_collision_pose, ref_frame_id="map")
         print("sleeping to allow motion to complete")
+        t0 = time()
 
         while True:
             error = vector_distance(self.get_end_effector_pose().position, non_collision_pose.pos)
             if error < 0.05:
                 print(
-                    "Action completed successfully which indicates the robot software is in the good state - meaning"
-                    " the motion planner is avoiding obstacles. exiting function early"
+                    "Action completed successfully which indicates the robot software is in the good state - the motion"
+                    " planner should avoid obstacles"
                 )
                 reset(curr_x, curr_y)
                 self._initialize_collision_world()
                 return
-            print("end effector error: ", round(error, 4), " - sleeping", flush=True)
+            print("end effector error: ", round(error, 4), f" - sleeping ({round(time()-t0, 2)}s elapsed)", flush=True)
             sleep(1.0)
 
+    def _get_grasp_rotation(self, bottle: Bottle) -> Quaternion:
+        visualize_tf_in_rviz("robot_pose_tf", _hsrb_pose_to_transform(self.omni_base.get_pose()))
+
+        # _THETA_OFFSET = np.deg2rad(-45)
+
+        # xy_bottle = bottle.xy_coords()
+        # xy_robot = self.base_xy_pose()
+        # theta = np.arctan2(xy_bottle[1] - xy_robot[1], xy_bottle[0] - xy_robot[0]) - (3*np.pi/2)
+        theta = _THETA_OFFSET
+
+        R = np.eye(3)
+        R = np.matmul(R, R_x(np.deg2rad(90)))
+        R = np.matmul(R, R_z(np.deg2rad(90)))
+        R = np.matmul(R, R_x(theta))
+        # R = np.matmul(R, R_x(-theta + _THETA_OFFSET))
+        print(f"  theta: {theta} / {np.rad2deg(theta)}")
+        # Sanity check the rotation
+        np.testing.assert_almost_equal(np.linalg.inv(R), np.transpose(R))
+        return quaternion_from_matrix(R)
+
     def get_bottle_to_robot_vector(self, bottle: Bottle) -> Vector3:
-        bottle_pose = bottle.tf.pose_hsrb_format()
         robot_xy = self.base_xy_pose()
         robot_position = vector3(x=robot_xy[0], y=robot_xy[1], z=DESK_HEIGHT)
-        return vec_addition(robot_position, vec_negation(bottle_pose.pos))
+        return vec_addition(robot_position, vec_negation(bottle.tf.position))
 
     def _get_grasp_pose(self, bottle: Bottle) -> Tuple[HsrbPose, float]:
         """Get the pose the end effector should move to in order to grasp the bottle. Assumes there will be a scooping
@@ -145,27 +186,31 @@ class HsrbRobot:
         Args:
             bottle (Bottle): The bottle to grasp
         """
-        bottle_pose = bottle.tf.pose_hsrb_format()
-        alpha = 0.1
         grasp_height_offset = (SODA_CAN_HEIGHT / 2.0) + 0.02
-
         # Grasp at the mid height of the can
-        adjusted_bottle_position = vec_addition(bottle_pose.pos, vector3(z=grasp_height_offset))
         bottle_to_robot_vec = self.get_bottle_to_robot_vector(bottle)
-        adjusted_bottle_position = vec_addition(adjusted_bottle_position, vec_scaled(bottle_to_robot_vec, alpha))
-        grasp_rotation = _END_EFF_FLAT_ROTATION  # TODO: Rotate quaternion about z-axis by the approach angle
-        grasp_pose = HsrbPose(adjusted_bottle_position, grasp_rotation)
-        return grasp_pose, vec_length(bottle_to_robot_vec) * alpha
+        scaled_bottle_to_robot_vec = vec_scaled(bottle_to_robot_vec, APPROACH_ALPHA)
+        grasp_position = vec_addition(bottle.tf.position, scaled_bottle_to_robot_vec)
+        # print(f"              robot:            {self.base_xy_pose()}")
+        # print(f"bottle_to_robot_vec:            {_vec3_str(bottle_to_robot_vec)}")
+        # print(f"scaled bottle_to_robot_vec:     {_vec3_str(scaled_bottle_to_robot_vec)}")
+        # print(f"    bottle_position:            {_vec3_str(bottle.tf.position)}")
+        # print(f"grasp_position:                 {_vec3_str(grasp_position)}")
+        # Add +z offset
+        height_adjusted_grasp_position = vec_addition(grasp_position, vector3(z=grasp_height_offset))
+        # print(f"height_adjusted_grasp_position: {_vec3_str(height_adjusted_grasp_position)}")
+        grasp_rotation = self._get_grasp_rotation(bottle)
+        grasp_pose = HsrbPose(height_adjusted_grasp_position, grasp_rotation)
+        return grasp_pose, vec_length(bottle_to_robot_vec) * APPROACH_ALPHA
 
     def base_xy_pose(self) -> Tuple[float, float]:
         base_pose, _ = self.omni_base.get_pose()
         return base_pose.x, base_pose.y
 
     def get_end_effector_pose(self) -> Transform:
-        # end_effector_frame = self.whole_body.end_effector_frame # hand_palm_link
+        # end effector link is 'hand_palm_link'
         end_eff_pose = self.whole_body.get_end_effector_pose(ref_frame_id="map")
-        tf = Transform(name="hsrb_end_effector", position=end_eff_pose.pos, rotation=end_eff_pose.ori)
-        return tf
+        return Transform(name="hsrb_end_effector", position=end_eff_pose.pos, rotation=end_eff_pose.ori)
 
     # ------------------------------------------------------------------------------------------------------------------
     #                                               Actions
@@ -175,6 +220,8 @@ class HsrbRobot:
             print("\n---------------------------", flush=True)
             print("  --- Grasping bottle ---  \n", flush=True)
 
+        base_pose = (bottle.xy_coords()[0] + OMNI_BASE_GRASP_OFFSET, DESK_TARGET_POSE[1], DESK_TARGET_POSE[2])
+        self.move_base_to(base_pose)
         self.move_to_neural()
         self.open_gripper()
 
@@ -183,29 +230,21 @@ class HsrbRobot:
         grasp_pose, dist_to_can = self._get_grasp_pose(bottle)
         visualize_tf_in_rviz("grasp_pose_tf", _hsrb_pose_to_transform(grasp_pose))
 
+        # sleep(3.0)
+        # exit()
+
         # Move to grasp pose
         print("  moving end effector to grasp pose", flush=True)
         try:
             self.whole_body.move_end_effector_pose(grasp_pose, ref_frame_id="map")
+            sleep(1.0)
         except FollowTrajectoryError:
             print("  failed to move to grasp pose. Aborting grasp", flush=True)
             return False
 
-        # Move the gripper forward by 5cm to help scoop the can
-        print("  doing scoop", flush=True)
-        print(f"  dist_to_can: {dist_to_can}", flush=True)
-        scoop_distance = 0.05
-        print(f"  scoop_distance: {scoop_distance}", flush=True)
-        try:
-            self.whole_body.move_end_effector_by_line((0, 0, 1), scoop_distance)
-        except MotionPlanningError as e:
-            print("  failed to do scoop. Aborting grasp", flush=True)
-            print(f"  error: '{e}'")
-            return False
-
         # Grab object
         print("  closing gripper", flush=True)
-        self.gripper.apply_force(0.5, delicate=True)
+        self.gripper.apply_force(0.5, delicate=True)  # blocking
 
         # Return to base pose
         print("  grasped bottle. moving back to base pose", flush=True)
@@ -219,10 +258,11 @@ class HsrbRobot:
             print("\n--------------------------------------------", flush=True)
             print("  --- Placing currently grasped bottle ---  \n", flush=True)
 
-        # self.move_base_to(DESK_CLEAN_TARGET_POSE)
-
         # Get target pose
-        target_rotation = _END_EFF_FLAT_ROTATION
+        R = np.eye(3)
+        R = np.matmul(R, R_x(np.deg2rad(90)))
+        R = np.matmul(R, R_z(np.deg2rad(90)))
+        target_rotation = quaternion_from_matrix(R)
         target_pose = HsrbPose(place_location, target_rotation)
         visualize_tf_in_rviz("grasp_pose_tf", _hsrb_pose_to_transform(target_pose))
 
@@ -230,20 +270,34 @@ class HsrbRobot:
         try:
             self.whole_body.move_end_effector_pose(target_pose, ref_frame_id="map")
         except FollowTrajectoryError:
-            print("  Failed to move to target pose ('hsrb_interface.exceptions.FollowTrajectoryError')", flush=True)
+            print(f"  Failed to move to target pose: ('{e}')", flush=True)
+            return False
+        except MotionPlanningError as e:
+            if "START_STATE_IN_COLLISION" in str(e):
+                print(
+                    "  Failed to move to target pose ('hsrb_interface.exceptions.MotionPlanningError:"
+                    " START_STATE_IN_COLLISION')",
+                    flush=True,
+                )
+                print("  going to try moving backwards and trying again")
+                self.omni_base.go_rel(x=-0.25)
+                self.whole_body.move_end_effector_pose(target_pose, ref_frame_id="map")
+                return False
+            print(f"  Failed to move to target pose with unhandled motion planning error ('{e}')", flush=True)
             return False
 
         print("  Opening gripper", flush=True)
         self.open_gripper()
 
-        print("  moving backwards by x=-0.5", flush=True)
-        self.omni_base.go_rel(x=-0.5)
+        print("  moving backwards by x=-0.25", flush=True)
+        self.omni_base.go_rel(x=-0.25)
 
-        print("  resetting to go pose", flush=True)
-        self.whole_body.move_to_go()
+        print("done", flush=True)
+        # print("  resetting to go pose", flush=True)
+        # self.whole_body.move_to_go()
 
-        print("  Placed bottle. moving back to base pose", flush=True)
-        self.move_base_to(DESK_CLEAN_TARGET_POSE)
+        # print("  Placed bottle. moving back to base pose", flush=True)
+        # self.move_base_to(DESK_CLEAN_TARGET_POSE)
         return True
 
     def open_gripper(self):
@@ -271,6 +325,10 @@ class HsrbRobot:
             print("\n--------------------------", flush=True)
             print("  --- Moving to pose ---  \n", flush=True)
 
+        if np.linalg.norm(np.array(self.base_xy_pose()) - np.array(pose[:2])) < 0.05:
+            print("  already close to target pose. skipping move", flush=True)
+            return
+
         try:
             print("  moving to go state", flush=True)
             self.whole_body.move_to_go()  # Ensures that the hand does not collide during the movement.
@@ -283,7 +341,7 @@ class HsrbRobot:
         print("  ^-- done", flush=True)
 
     def say(self, text: str) -> None:
-        print(f"  robot: '{text}'")
+        print(f"robot: '{text}'", flush=True)
         self._speaker.say(text)
 
 

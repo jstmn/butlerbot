@@ -6,11 +6,10 @@ from src.gazebo_utils import (
     visualize_cuboid_in_rviz,
     visualize_tf_set_in_rviz,
 )
-from src.supporting_types import Bottle, Cuboid, Transform, Sphere
+from src.supporting_types import Bottle, Cuboid, Transform
 from src.hsrb_robot import HsrbRobot
 from src.primitives import (
     get_bottle_to_grasp,
-    am_currently_holding_a_bottle,
     get_bottle_place_location,
 )
 from src.perception import scan_for_bottles
@@ -31,8 +30,9 @@ _BASKET_AREA = Cuboid(
     xyz_min=vector3(BASKET_XY[0] - BASKET_RADIUS, BASKET_XY[1] - BASKET_RADIUS, DESK_HEIGHT),
     xyz_max=vector3(BASKET_XY[0] + BASKET_RADIUS, BASKET_XY[1] + BASKET_RADIUS, DESK_HEIGHT + BASKET_HEIGHT),
 )
-_BASKET_AREA.add_x_padding(0.05)
-_BASKET_AREA.add_y_padding(0.05)
+_BASKET_AREA.add_x_padding(0.125)
+_BASKET_AREA.add_y_padding(0.125)
+_BASKET_AREA.add_z_padding(0.075)
 CLEAN_AREA = _BASKET_AREA
 visualize_cuboid_in_rviz("clean_area", CLEAN_AREA)  # pubs to 'visualization_marker'
 
@@ -87,12 +87,11 @@ python3 main.py
 """
 
 if __name__ == "__main__":
-    print("Sleeping for 1 seconds to allow the robot to initialize", flush=True)
-    rospy.sleep(1.0)
     robot.say("Hello. My name is Mr. Butler. I will now clean the table")
 
     # Move to the table
     robot.move_base_to(DESK_TARGET_POSE, print_header=True)
+    sleep(0.5)
 
     while True:
         # Find all bottles
