@@ -42,7 +42,7 @@ robot = HsrbRobot(_robot, _BASKET_AREA)
 
 # Update the ground truth bottle poses (from gazebo) at a fixed frequency
 BOTTLE_POSES_GT: List[Transform] = []
-if GAZEBO_MODE:
+if GET_BOTTLE_POSES_FROM_GAZEBO:
     bottle_tf_update_frequency = 0.5
     last_published = None
 
@@ -65,7 +65,7 @@ def scan_for_bottles_wrapper(robot: HsrbRobot, print_header: bool = False) -> Li
     if print_header:
         print("\n--------------------------------")
         print("  --- Scanning for bottles ---  ")
-    if not GAZEBO_MODE:
+    if not GET_BOTTLE_POSES_FROM_GAZEBO:
         return scan_for_bottles(robot)
     else:
         return [Bottle(pose) for pose in BOTTLE_POSES_GT]

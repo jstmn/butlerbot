@@ -2,6 +2,7 @@ import numpy as np
 
 PI = np.pi
 GAZEBO_MODE = True
+GET_BOTTLE_POSES_FROM_GAZEBO = False
 
 SODA_CAN_WIDTH = 0.0662  # m
 SODA_CAN_HEIGHT = 0.1246  # m

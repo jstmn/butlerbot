@@ -120,11 +120,13 @@ class HsrbRobot:
         collision_world = CollisionWorld("global_collision_world")
         curr_x, curr_y = self.omni_base.get_pose()[0].x, self.omni_base.get_pose()[0].y
 
+        # Remove all obstacles from the CollisionWorld and move the robot to its starting position in the neutral pose
         def reset(curr_x, curr_y):
             collision_world.remove_all()
             self.whole_body.move_to_neutral()
             self.omni_base.go_abs(curr_x, curr_y, 0)
 
+        # Add a box to the CollisionWorld and provide it to the motion planner
         def add_box(curr_x, curr_y):
             collision_world.add_box(
                 x=0.5, y=0.75, z=0.7, pose=hsrb_pose(x=curr_x + 1.0, y=curr_y, z=0.35), frame_id="map"
@@ -134,9 +136,11 @@ class HsrbRobot:
         non_collision_pose = HsrbPose(
             pos=vector3(x=curr_x + 1.0, y=curr_y, z=0.8), ori=quaternion(x=0.7071068, y=0, z=0.7071068, w=0)
         )
-        #
         reset(curr_x, curr_y)
         add_box(curr_x, curr_y)
+        # Expected behavior: the end effector enters the box ( its target is above the box). It then waits there for 70
+        # seconds, before slowly moving to the actual target. After the robot completes its motion, the system should be
+        # in a good state
         self.whole_body.move_end_effector_pose(pose=non_collision_pose, ref_frame_id="map")
         print("sleeping to allow motion to complete")
         t0 = time()
@@ -186,7 +190,11 @@ class HsrbRobot:
         Args:
             bottle (Bottle): The bottle to grasp
         """
-        grasp_height_offset = (SODA_CAN_HEIGHT / 2.0) + 0.02
+        if GET_BOTTLE_POSES_FROM_GAZEBO:
+            grasp_height_offset = (SODA_CAN_HEIGHT / 2.0) + 0.02
+        else:
+            grasp_height_offset = 0.01
+
         # Grasp at the mid height of the can
         bottle_to_robot_vec = self.get_bottle_to_robot_vector(bottle)
         scaled_bottle_to_robot_vec = vec_scaled(bottle_to_robot_vec, APPROACH_ALPHA)
@@ -293,11 +301,6 @@ class HsrbRobot:
         self.omni_base.go_rel(x=-0.25)
 
         print("done", flush=True)
-        # print("  resetting to go pose", flush=True)
-        # self.whole_body.move_to_go()
-
-        # print("  Placed bottle. moving back to base pose", flush=True)
-        # self.move_base_to(DESK_CLEAN_TARGET_POSE)
         return True
 
     def open_gripper(self):
@@ -315,6 +318,9 @@ class HsrbRobot:
 
     def move_to_neural(self) -> None:
         self.whole_body.move_to_neutral()
+
+    def move_to_go(self) -> None:
+        self.whole_body.move_to_go()
 
     def look_at(self, position: Vector3) -> None:
         """Look at a point. Will not self-collide"""
@@ -343,46 +349,3 @@ class HsrbRobot:
     def say(self, text: str) -> None:
         print(f"robot: '{text}'", flush=True)
         self._speaker.say(text)
-
-
-"""
-def print_diffs(old, new):
-            names = self.whole_body.joint_state.name
-            for i in range(len(old)):
-                if abs(old[i] - new[i]) > 0.003:
-                    print(f"{names[i]}: {round(old[i], 4)} -> {round(new[i],4)}")
-
-        print("  moving to 0deg")
-        curr_x, curr_y = self.base_xy_pose()
-        self.move_base_to((curr_x, curr_y, 0))
-
-        # Set the collision world
-        print("  moving to neutral")
-        self.whole_body.move_to_neutral()
-        print("  moving to target pose")
-        # Needs to be 'global_collision_world' for some reason. See L181 in /opt/ros/noetic/lib/python3/dist-packages/hsrb_interface/settings.py
-        self.whole_body.collision_world = CollisionWorld("global_collision_world")
-        self.whole_body.collision_world.add_box(
-            x=1.0, y=0.75, z=0.7, pose=hsrb_pose(x=curr_x + 1, y=curr_y, z=0.35), frame_id="map"
-        )
-        target_pose = HsrbPose(
-            pos=vector3(x=curr_x + 1.0, y=curr_y, z=0.5), ori=quaternion(x=0.7071068, y=0, z=0.7071068, w=0)
-        )
-        self.whole_body.move_end_effector_pose(pose=target_pose, ref_frame_id="map")
-        print("  moving back to neutral")
-        self.whole_body.move_to_neutral()
-
-        self.whole_body.collision_world.remove_all()
-        self.update_collision_world(self.whole_body.collision_world)
-
-        current_posv = np.array(self.whole_body.joint_state.position)
-        print(f"  testing  'arm_lift_joint' movement")
-        self.whole_body.move_to_joint_positions({"arm_lift_joint": 0.2})
-        rospy.sleep(3.0)
-
-        print("  joint differences:")
-        new_posv = np.array(self.whole_body.joint_state.position)
-        print_diffs(current_posv, new_posv)
-        self.whole_body.move_to_neutral()
-        print("done")
-"""

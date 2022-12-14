@@ -346,12 +346,12 @@
       <name>hsr_orange_TOGRASP_4</name>
     </include> -->
 
-    <!-- <include>
+    <include>
       <static>0</static>
       <pose>7.8 6.2 0.765 0 0 1</pose>
       <uri>model://bottle_with_marker</uri>
       <name>hsr_orange_TOGRASP_2</name>
-    </include> -->
+    </include>
 
     <include>
       <static>0</static>
@@ -360,13 +360,12 @@
       <name>hsr_orange_TOGRASP_3</name>
     </include>
 
-    <!-- <include>
+    <include>
       <static>0</static>
       <pose>8.3 6.185 0.765 0 0 1</pose>
       <uri>model://bottle_with_marker0002</uri>
       <name>hsr_orange_TOGRASP_4</name>
-    </include> -->
-
+    </include>
 
     <!-- END OF Graspable -->
 

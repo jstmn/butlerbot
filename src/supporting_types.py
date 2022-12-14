@@ -140,6 +140,9 @@ class Transform:
     def pose_hsrb_format(self) -> HsrbPose:
         return HsrbPose(self.position, self.rotation)
 
+    def shift_z(self, z: float):
+        self.position = vector3(self.position.x, self.position.y, self.position.z + z)
+
     def __str__(self):
         return f"[Transform[{self.name}] position: {self.position}, rotation: {self.rotation}]"
 

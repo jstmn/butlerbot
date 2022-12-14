@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="namespace" default="hsrb"/>
+  <arg name="personal_name" default="" />
+  <arg name="debug" default="false"/>
+  <arg name="gui" default="true" />
+  <!-- <arg name="rviz" default="true"/> -->
+  <arg name="rviz" default="false"/>
+  <arg name="custom_rviz" default="true"/>  <!--`custom_rviz` uses the rviz config saved to ~/Projects/butler-bot/ -->
+
+  <arg name="gazebo_visualization" default="false" />
+  <arg name="use_manipulation" default="true" />
+  <arg name="use_navigation" default="true" />
+  <arg name="use_perception" default="true" />
+  <arg name="use_task" default="true" />
+  <arg name="use_teleop" default="true" />
+  <arg name="use_web" default="true" />
+  <arg name="use_laser_odom" default="true" />
+  <arg name="paused" default="true" />
+  <!-- <arg name="fast_physics" default="false" /> -->
+  <arg name="robot_name" default="$(optenv ROBOT_NAME hsrb)" />
+
+  <!-- <arg unless="$(arg fast_physics)" name="world_suffix" value=""/>
+  <arg     if="$(arg fast_physics)" name="world_suffix" value="_fast"/> -->
+
+  <include file="$(find hsrb_gazebo_launch)/launch/include/hsrb_gazebo_common.xml" pass_all_args="true" >
+    <arg name="map" default="$(find tmc_potential_maps)/maps/apartment/map.yaml" />
+    <arg name="world_name" value="$(find tmc_gazebo_worlds)/worlds/butler_bot_armarker_world.world" />
+    
+    <!-- <arg name="robot_pos" value="-x 5 -y 6.6 -z 0 -Y 0.0" /> -->
+    <arg name="robot_pos" value="-x 7.74 -y 6.85 -z 0 -Y 4.7124" />
+    <arg name="ground_truth_xyz_offset" value="-5.0\ -6.6\ 0.0" />
+    <arg name="ground_truth_rpy_offset" value="0.0\ 0.0\ 0.0" />
+
+  </include>
+</launch>
