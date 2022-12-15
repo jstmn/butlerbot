@@ -1,29 +1,20 @@
 # ButlerBot
 
-Pseudo-code
+The code in this repo controls the Human Support Robot (HSR) to execute the task of picking up all visible soda cans off of a table and placing them in a trash can. To simplify the problem, several assumptions were made:
+- The cans would be located on top of a single desk
+- The cans would all be upright
+- The size and location of the desk would be known ahead of time
+- The size and location of the trash can would be known ahead of time
 
-``` python
-move_to_table()
+This project was done as the final project of [CSCI 513: Cyber Physical Systems](https://jdeshmukh.github.io/teaching/cs513-autocps-fall-2022/index.html).
 
-while True:
-  bottle_poses = get_poses_of_all_bottles()
-  out_of_place_bottles = get_out_of_place_subset(bottle_poses)
+Demo:
+![alt text](https://github.com/jstmn/butlerbot/blob/master/media/fsm.png?raw=true)
 
-  if len(out_of_place_bottles) == 0:
-    say("No more bottles to pickup, cleaning mission complete")	
-    return
 
-  bottle_to_grasp = choose_bottle_to_grasp(out_of_place_bottles)
-  grasp_bottle(bottle_to_grasp)
+This code is an implementation of the following finite state machine:
+![alt text](https://github.com/jstmn/butlerbot/blob/master/media/ButlerBot-Demo-2.gif?raw=true)
 
-  bottle_grasped = am_currently_holding_bottle()
-  if bottle_grasped:
-    say("successfully picked up bottle")
-  else:
-      raise error
-
-  place_bottle_on_tray()
-```
 
 
 ## Setup
