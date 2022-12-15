@@ -9,12 +9,7 @@ The code in this repo controls the Human Support Robot (HSR) to execute the task
 This project was done as the final project of [CSCI 513: Cyber Physical Systems](https://jdeshmukh.github.io/teaching/cs513-autocps-fall-2022/index.html).
 
 Demo:
-![alt text](https://github.com/jstmn/butlerbot/blob/master/media/fsm.png?raw=true)
-
-
-This code is an implementation of the following finite state machine:
 ![alt text](https://github.com/jstmn/butlerbot/blob/master/media/ButlerBot-Demo-2.gif?raw=true)
-
 
 
 ## Setup
@@ -51,8 +46,6 @@ rostopic echo /clicked_point    # then 'Publish Point' in Rviz
 # Terminal 3:
 python3 main.py
 ```
-
-
 
 
 ## Reference frames
